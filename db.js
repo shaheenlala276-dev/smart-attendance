@@ -2,7 +2,7 @@
    Upgrades only ever ADD stores/indexes. Existing records are never deleted. */
 const DB_NAME = 'smart-attendance';
 const DB_VERSION = 1;
-const APP_VERSION = '0.1.0';
+const APP_VERSION = '0.2.0';
 
 // name: [keyPath, [[indexName, keyPath, unique], ...]]
 const SCHEMA = {
@@ -69,9 +69,11 @@ const DB = {
   getAll: (store) => run(store, 'readonly', tx => wrap(tx.objectStore(store).getAll())),
   count: (store) => run(store, 'readonly', tx => wrap(tx.objectStore(store).count())),
   put: (store, value) => run(store, 'readwrite', tx => wrap(tx.objectStore(store).put(value))),
-  /* Save several records across stores in ONE transaction: all or nothing.
+  /* Save/delete several records across stores in ONE transaction: all or nothing.
      ops = [{store, value}, ...] */
-  putMany: (ops) => run([...new Set(ops.map(o => o.store))], 'readwrite', tx => Promise.all(ops.map(o => wrap(tx.objectStore(o.store).put(o.value))))),
+  /* ops: {store, value} saves a record, {store, del: key} deletes one. */
+  putMany: (ops) => run([...new Set(ops.map(o => o.store))], 'readwrite', tx => Promise.all(ops.map(o => wrap(o.del !== undefined ? tx.objectStore(o.store).delete(o.del) : tx.objectStore(o.store).put(o.value))))),
+  countByIndex: (store, index, key) => run(store, 'readonly', tx => wrap(tx.objectStore(store).index(index).count(key))),
   async audit(action, entity, entityId, details) {
     return DB.put('auditLogs', { id: uid(), at: new Date().toISOString(), action, entity, entityId, details: details || null, by: 'admin' });
   },
@@ -86,4 +88,3 @@ const DB = {
     return out;
   }
 };
-
