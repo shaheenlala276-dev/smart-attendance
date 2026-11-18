@@ -9,7 +9,7 @@ const NAV = [
   ['settings', 'Settings', 'Settings', 1], ['about', 'About', 'About', 1]
 ];
 const BOTTOM = ['dashboard', 'students', 'scanner', 'reports', 'setup'];
-const LIVE = ['dashboard', 'setup', 'settings', 'about'];
+const LIVE = ['dashboard', 'setup', 'students', 'idcards', 'settings', 'about'];
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 let institution = null;
@@ -51,6 +51,8 @@ async function route() {
   try {
     if (page === 'dashboard') await viewDashboard(v);
     else if (page === 'setup') await viewSetup(v);
+    else if (page === 'students') await viewStudents(v);
+    else if (page === 'idcards') await viewIdCards(v);
     else if (page === 'settings') await viewSettings(v);
     else if (page === 'about') viewAbout(v);
     else viewSoon(v, page);
@@ -78,7 +80,7 @@ async function viewDashboard(v) {
       <p><span class="pill ${navigator.onLine ? '' : 'ok'}">${navigator.onLine ? 'Online' : 'Offline'}</span>
       <span class="pill ${'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'ok' : ''}" id="sw-pill">${'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Offline cache active' : 'Offline cache not active yet'}</span>
       <span class="pill ok">Database ready</span></p>
-      <p class="note">${c.students === 0 ? 'Next: student registration arrives in Phase 2.' : ''}All data is stored only on this device.</p></div>`;
+      <p class="note">${c.students === 0 ? 'Add your first student in <a href="#students">Students</a>. ' : ''}All data is stored only on this device.</p></div>`;
 }
 
 function readLogo(file) {
@@ -189,4 +191,3 @@ function setupPWA() {
   setupPWA();
   route();
 })();
-
