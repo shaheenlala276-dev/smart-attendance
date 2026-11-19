@@ -4,11 +4,11 @@ const NAV = [
   ['students', 'Students', 'Students', 2], ['teachers', 'Teachers', 'Teachers', 3],
   ['classes', 'Classes and Sections', 'Classes', 3], ['subjects', 'Subjects', 'Subjects', 3],
   ['assignments', 'Teacher Assignments', 'Assign', 3], ['idcards', 'QR Codes and ID Cards', 'ID Cards', 2],
-  ['scanner', 'QR Attendance', 'Scan', 4], ['history', 'Attendance History', 'History', 4],
+  ['scanner', 'QR Attendance', 'Scan', 4], ['history', 'Attendance Records', 'Records', 4],
   ['reports', 'Reports', 'Reports', 5], ['backup', 'Backup and Restore', 'Backup', 6],
   ['settings', 'Settings', 'Settings', 1], ['about', 'About', 'About', 1]
 ];
-const BOTTOM = ['dashboard', 'students', 'scanner', 'reports', 'setup'];
+const BOTTOM = ['dashboard', 'students', 'scanner', 'history', 'setup'];
 const LIVE = ['dashboard', 'setup', 'students', 'idcards', 'settings', 'about'];
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -31,9 +31,9 @@ function renderNav(cur) {
 
 async function applyTheme() {
   let t = await DB.getSetting('theme', null);
-  if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  if (!t) t = 'dark';
   document.documentElement.dataset.theme = t;
-  document.querySelector('meta[name=theme-color]').content = t === 'dark' ? '#0f1715' : '#16423c';
+  document.querySelector('meta[name=theme-color]').content = t === 'dark' ? '#080D0C' : '#16423c';
 }
 async function toggleTheme() {
   const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
@@ -42,17 +42,21 @@ async function toggleTheme() {
 }
 
 async function route() {
-  const id = (location.hash || '#dashboard').slice(1);
+  if (typeof stopScanner === 'function') stopScanner();
+  const parts = (location.hash || '#dashboard').slice(1).split('/'), id = parts[0], args = parts.slice(1);
   const known = NAV.some(n => n[0] === id);
   let page = known ? id : 'dashboard';
   if (!institution && page !== 'setup' && page !== 'about') page = 'setup';
   renderNav(page);
   const v = $('#view');
+  v.onclick = v.onchange = v.oninput = v.onsubmit = null;
   try {
     if (page === 'dashboard') await viewDashboard(v);
     else if (page === 'setup') await viewSetup(v);
     else if (page === 'students') await viewStudents(v);
     else if (page === 'idcards') await viewIdCards(v);
+    else if (page === 'scanner') await viewAttendanceHub(v, args);
+    else if (page === 'history') await viewRecords(v);
     else if (page === 'settings') await viewSettings(v);
     else if (page === 'about') viewAbout(v);
     else viewSoon(v, page);
@@ -72,10 +76,12 @@ async function viewDashboard(v) {
   const c = await DB.counts();
   const logo = institution.logo ? `<img src="${institution.logo}" alt="Institution logo">` : `<div class="logo-ph">No logo</div>`;
   const stat = (n, l) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`;
+  const att = typeof attendanceDashHtml === 'function' ? await attendanceDashHtml() : '';
   v.innerHTML = `
     <div class="card hero">${logo}<div><h1>${esc(institution.name)}</h1>
     <p class="sub" style="margin:0">${esc(institution.type)}${institution.city ? ' - ' + esc(institution.city) : ''}</p></div></div>
-    <div class="grid">${stat(c.students, 'Students') + stat(c.teachers, 'Teachers') + stat(c.classes, 'Classes') + stat(c.subjects, 'Subjects') + stat(c.sessions, 'Sessions') + stat(c.attendance, 'Attendance records')}</div>
+    ${att}
+    <div class="grid" style="margin-top:14px">${stat(c.students, 'Students') + stat(c.teachers, 'Teachers') + stat(c.classes, 'Classes') + stat(c.subjects, 'Subjects') + stat(c.sessions, 'Sessions') + stat(c.attendance, 'Attendance records')}</div>
     <div class="card" style="margin-top:14px"><h2>System status</h2>
       <p><span class="pill ${navigator.onLine ? '' : 'ok'}">${navigator.onLine ? 'Online' : 'Offline'}</span>
       <span class="pill ${'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'ok' : ''}" id="sw-pill">${'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Offline cache active' : 'Offline cache not active yet'}</span>
