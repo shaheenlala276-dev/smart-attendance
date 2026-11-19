@@ -1,7 +1,7 @@
 /* Smart Attendance - IndexedDB layer (schema v1).
    Upgrades only ever ADD stores/indexes. Existing records are never deleted. */
 const DB_NAME = 'smart-attendance';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const APP_VERSION = '0.2.0';
 
 // name: [keyPath, [[indexName, keyPath, unique], ...]]
@@ -14,8 +14,8 @@ const SCHEMA = {
   sections: ['id', [['classId', 'classId', false]]],
   subjects: ['id', [['name', 'name', false]]],
   teacherAssignments: ['id', [['teacherId', 'teacherId', false], ['classId', 'classId', false], ['subjectId', 'subjectId', false]]],
-  sessions: ['id', [['date', 'date', false], ['teacherId', 'teacherId', false], ['classId', 'classId', false]]],
-  attendance: ['id', [['sessionId', 'sessionId', false], ['studentId', 'studentId', false], ['sessionStudent', ['sessionId', 'studentId'], true]]],
+  sessions: ['id', [['date', 'date', false], ['teacherId', 'teacherId', false], ['classId', 'classId', false], ['status', 'status', false]]],
+  attendance: ['id', [['sessionId', 'sessionId', false], ['studentId', 'studentId', false], ['sessionStudent', ['sessionId', 'studentId'], true], ['date', 'date', false], ['classId', 'classId', false]]],
   settings: ['key', []],
   auditLogs: ['id', [['at', 'at', false], ['entity', 'entity', false]]]
 };
@@ -73,6 +73,9 @@ const DB = {
      ops = [{store, value}, ...] */
   /* ops: {store, value} saves a record, {store, del: key} deletes one. */
   putMany: (ops) => run([...new Set(ops.map(o => o.store))], 'readwrite', tx => Promise.all(ops.map(o => wrap(o.del !== undefined ? tx.objectStore(o.store).delete(o.del) : tx.objectStore(o.store).put(o.value))))),
+  getAllByIndex: (store, index, key) => run(store, 'readonly', tx => wrap(tx.objectStore(store).index(index).getAll(key))),
+  getOneByIndex: (store, index, key) => run(store, 'readonly', tx => wrap(tx.objectStore(store).index(index).get(key))),
+  getRange: (store, index, lo, hi) => run(store, 'readonly', tx => wrap(tx.objectStore(store).index(index).getAll(IDBKeyRange.bound(lo, hi)))),
   countByIndex: (store, index, key) => run(store, 'readonly', tx => wrap(tx.objectStore(store).index(index).count(key))),
   async audit(action, entity, entityId, details) {
     return DB.put('auditLogs', { id: uid(), at: new Date().toISOString(), action, entity, entityId, details: details || null, by: 'admin' });
