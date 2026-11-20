@@ -2,7 +2,7 @@
    Upgrades only ever ADD stores/indexes. Existing records are never deleted. */
 const DB_NAME = 'smart-attendance';
 const DB_VERSION = 2;
-const APP_VERSION = '0.2.0';
+const APP_VERSION = '0.4.0';
 
 // name: [keyPath, [[indexName, keyPath, unique], ...]]
 const SCHEMA = {
@@ -73,6 +73,10 @@ const DB = {
      ops = [{store, value}, ...] */
   /* ops: {store, value} saves a record, {store, del: key} deletes one. */
   putMany: (ops) => run([...new Set(ops.map(o => o.store))], 'readwrite', tx => Promise.all(ops.map(o => wrap(o.del !== undefined ? tx.objectStore(o.store).delete(o.del) : tx.objectStore(o.store).put(o.value))))),
+  /* Consistent read of every store in one transaction (used by backup and health check). */
+  snapshot: () => run(Object.keys(SCHEMA), 'readonly', async tx => { const out = {}; await Promise.all(Object.keys(SCHEMA).map(async n => { out[n] = await wrap(tx.objectStore(n).getAll()); })); return out; }),
+  /* Replace ALL data in ONE transaction. If anything fails the browser rolls everything back, so a restore is never half done. */
+  replaceAll: data => run(Object.keys(SCHEMA), 'readwrite', tx => { const ps = []; for (const n of Object.keys(SCHEMA)) { const st = tx.objectStore(n); ps.push(wrap(st.clear())); for (const r of (data[n] || [])) ps.push(wrap(st.put(r))); } return Promise.all(ps); }),
   getAllByIndex: (store, index, key) => run(store, 'readonly', tx => wrap(tx.objectStore(store).index(index).getAll(key))),
   getOneByIndex: (store, index, key) => run(store, 'readonly', tx => wrap(tx.objectStore(store).index(index).get(key))),
   getRange: (store, index, lo, hi) => run(store, 'readonly', tx => wrap(tx.objectStore(store).index(index).getAll(IDBKeyRange.bound(lo, hi)))),
