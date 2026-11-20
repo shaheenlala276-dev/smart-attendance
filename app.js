@@ -57,6 +57,8 @@ async function route() {
     else if (page === 'idcards') await viewIdCards(v);
     else if (page === 'scanner') await viewAttendanceHub(v, args);
     else if (page === 'history') await viewRecords(v);
+    else if (page === 'backup') await viewBackup(v);
+    else if (page === 'reports') await viewReports(v);
     else if (page === 'settings') await viewSettings(v);
     else if (page === 'about') viewAbout(v);
     else viewSoon(v, page);
@@ -152,7 +154,7 @@ async function viewSettings(v) {
   v.innerHTML = `<h1>Settings</h1><p class="sub">Application preferences.</p>
   <div class="card"><h2>Appearance</h2><button class="btn ghost" id="t" type="button">Switch light / dark theme</button></div>
   <div class="card"><h2>Data protection</h2><p>Persistent storage: <span class="pill ${persisted ? 'ok' : ''}">${persisted ? 'Granted' : 'Not granted'}</span></p>
-  <p class="note">Persistent storage asks the browser not to clear your data when the phone runs low on space. Full backups arrive in Phase 6; clearing browser data will erase records.</p>
+  <p class="note">Persistent storage asks the browser not to clear your data when the phone runs low on space. Clearing browser data erases records, so download a backup regularly from <a href="#backup">Backup and Data</a>.</p>
   <button class="btn ghost" id="p" type="button">Request persistent storage</button></div>`;
   $('#t').onclick = toggleTheme;
   $('#p').onclick = async () => {
