@@ -21,6 +21,7 @@ async function buildBackup() {
 async function exportBackup() {
   const b = await buildBackup();
   downloadFile(`smart-attendance-backup-${stamp()}.json`, JSON.stringify(b), 'application/json');
+  try { await DB.setSetting('lastBackupAt', new Date().toISOString()); } catch (e) { /* not critical */ }
   return b;
 }
 
