@@ -150,3 +150,14 @@ dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px}dt{color:va
 @media print{.ph{display:block;margin-bottom:10px;border-bottom:2px solid #000;padding-bottom:6px}.ph img{height:44px;float:left;margin-right:10px}.ph h2{margin:0}
 .rep,.rep *{color:#000!important;background:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 .rep .card{border:0;padding:6px 0;margin:0 0 8px}.rt th,.rt td{border:1px solid #888;padding:4px 6px}.tw{overflow:visible}.rt{font-size:10pt}.rep .grid{display:flex;gap:5mm;margin:8px 0}.rep .stat{border:1px solid #888}}
+
+/* ===== Phase 4 part 2: lock screen, settings, about ===== */
+html[data-fs=large] body{font-size:18px}
+.lock{position:fixed;inset:0;z-index:300;display:grid;place-items:center;padding:20px;overflow:auto;background:radial-gradient(800px 500px at 80% -10%,rgba(22,168,117,.2),transparent 60%),#080D0C;color:#F4F7F5}
+.lockbox{width:100%;max-width:340px;text-align:center}.lockbox .mark{display:inline-block;margin-bottom:10px}
+.lockbox label{text-align:left}.lockbox .note{color:#9BA9A2}
+.pinin{text-align:center;font-size:1.6rem;letter-spacing:.4em;padding:12px}
+.reccode{font:700 1.3rem ui-monospace,Menlo,Consolas,monospace;letter-spacing:.06em;text-align:center;padding:14px;border:1px dashed var(--brand);border-radius:12px;word-break:break-all}
+details{border-bottom:1px solid var(--line);padding:8px 0}details:last-child{border:0}summary{cursor:pointer;font-weight:600;min-height:32px}details p{margin:8px 0 4px;color:var(--muted)}
+.card ul{margin:0;padding-left:20px}.card li{margin:4px 0}
+@media print{#lock{display:none}}
