@@ -139,3 +139,14 @@ dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px}dt{color:va
 .rav{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:1.4rem;background:var(--brand);color:#04120d;flex-shrink:0}
 .rpanel.warn .rav{background:#E9B65B}.rpanel.err .rav{background:#EF7373}
 @media print{body{background:#fff!important;color:#000!important}}
+.cmp{display:grid;grid-template-columns:1fr auto auto;gap:6px 18px;font-size:.92rem}.cmp span:nth-child(3n+2),.cmp span:nth-child(3n),.cmp b:nth-child(3n+2),.cmp b:nth-child(3n){text-align:right}
+.issue{border-left:4px solid var(--line);padding:8px 12px;margin:10px 0;background:var(--card);border-radius:8px}
+.issue.error{border-color:var(--err)}.issue.warn{border-color:var(--warn)}.issue.info{border-color:var(--brand)}
+.issue span{display:block;color:var(--muted);font-size:.85rem}
+
+/* ===== Phase 4 part 1: reports and printing ===== */
+.tw{overflow-x:auto}.rt{width:100%;border-collapse:collapse;font-size:.88rem}.rt th,.rt td{text-align:left;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}.rt th{color:var(--muted);font-weight:600}.rt .n{text-align:right}.low{color:var(--err);font-weight:600}
+.ph{display:none}[hidden]{display:none!important}
+@media print{.ph{display:block;margin-bottom:10px;border-bottom:2px solid #000;padding-bottom:6px}.ph img{height:44px;float:left;margin-right:10px}.ph h2{margin:0}
+.rep,.rep *{color:#000!important;background:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.rep .card{border:0;padding:6px 0;margin:0 0 8px}.rt th,.rt td{border:1px solid #888;padding:4px 6px}.tw{overflow:visible}.rt{font-size:10pt}.rep .grid{display:flex;gap:5mm;margin:8px 0}.rep .stat{border:1px solid #888}}
