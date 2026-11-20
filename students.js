@@ -18,14 +18,51 @@ async function loadAll() {
 }
 const newQr = () => { const used = new Set(D.students.map(s => s.qrId)); let q; do { q = uid(); } while (used.has(q)); return q; };
 
-/* ---------- QR (uses lib/qrcode.js = qrcode-generator by Kazuhiko Arase) ---------- */
-function qrSvg(text) {
-  if (typeof qrcode === 'undefined') throw new Error('QR library not found. Add lib/qrcode.js to the project (see the setup steps).');
+/* ---------- QR (uses lib/qrcode.js: QRCode for JavaScript by Kazuhiko Arase, MIT) ---------- */
+/* The QR code is always drawn from the student's saved random qrId, so it is the same every time. */
+function qrMatrix(text) {
+  if (typeof qrcode === 'undefined') throw new Error('QR library not found. Make sure lib/qrcode.js is uploaded next to index.html.');
   const q = qrcode(0, 'M'); q.addData(text); q.make();
-  const n = q.getModuleCount(), m = 3; let d = '';
-  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += `M${c + m} ${r + m}h1v1h-1z`;
+  return { n: q.getModuleCount(), dark: (r, c) => q.isDark(r, c) };
+}
+function qrSvg(text) {
+  let q; try { q = qrMatrix(text); } catch (e) { return `<div class="qrerr">QR code could not be drawn. ${esc(e.message)}</div>`; }
+  const n = q.n, m = 4; let d = '';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.dark(r, c)) d += `M${c + m} ${r + m}h1v1h-1z`;
   const w = n + 2 * m;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${w}" shape-rendering="crispEdges" role="img" aria-label="Student QR code"><rect width="${w}" height="${w}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+}
+const stuClass = s => D.cn(s.classId) + (D.sn(s.sectionId) ? ' - ' + D.sn(s.sectionId) : '');
+function qrCardHtml(s) {
+  return `<div class="qrcard"><div class="qrbox">${qrSvg(s.qrId)}</div><b>${esc(s.name)}</b><span>Roll No: ${esc(s.roll)}</span>${s.regNo ? `<span>Reg No: ${esc(s.regNo)}</span>` : ''}<span>Class: ${esc(stuClass(s))}</span></div>`;
+}
+/* Sharp PNG with the student's name, roll number and class written below the QR code. */
+function qrPngBlob(s) {
+  const q = qrMatrix(s.qrId), quiet = 4, px = Math.max(8, Math.floor(480 / (q.n + 2 * quiet))), qw = (q.n + 2 * quiet) * px, pad = 36, W = Math.max(qw + 2 * pad, 560), H = pad + qw + 150;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, H); x.fillStyle = '#000';
+  const ox = Math.round((W - qw) / 2), oy = pad;
+  for (let r = 0; r < q.n; r++) for (let c = 0; c < q.n; c++) if (q.dark(r, c)) x.fillRect(ox + (c + quiet) * px, oy + (r + quiet) * px, px, px);
+  x.textAlign = 'center'; const cx = W / 2, line = (t, size, bold, y) => { let f = size; do { x.font = `${bold ? 'bold ' : ''}${f}px system-ui,Arial,sans-serif`; f--; } while (x.measureText(t).width > W - 2 * pad && f > 12); x.fillText(t, cx, y); };
+  line(s.name, 34, true, oy + qw + 44); line(`Roll No: ${s.roll}${s.regNo ? '   Reg No: ' + s.regNo : ''}`, 26, false, oy + qw + 82); line(`Class: ${stuClass(s)}`, 26, false, oy + qw + 116);
+  return new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('Could not create the PNG.')), 'image/png'));
+}
+async function downloadQr(s) {
+  try {
+    const blob = await qrPngBlob(s), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = ('QR-' + s.name + '-' + s.roll).replace(/[^\w\u0600-\u06FF.-]+/g, '_') + '.png';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast('QR code saved as a PNG picture.', 'ok');
+  } catch (e) { toast('Could not save the QR code: ' + e.message, 'err'); }
+}
+function printQr(s) {
+  const old = document.getElementById('qr-print'); if (old) old.remove();
+  const el = document.createElement('div'); el.id = 'qr-print';
+  el.innerHTML = `<div class="qrp"><div class="qrp-h">${esc((typeof institution !== 'undefined' && institution && institution.name) || '')}</div>${qrCardHtml(s)}</div>`;
+  document.body.appendChild(el); document.body.classList.add('qr-printing');
+  const done = () => { el.remove(); document.body.classList.remove('qr-printing'); window.removeEventListener('afterprint', done); window.removeEventListener('pointerdown', done); };
+  window.addEventListener('afterprint', done); window.addEventListener('pointerdown', done);
+  setTimeout(() => window.print(), 150);
 }
 
 /* ---------- small UI helpers ---------- */
@@ -138,6 +175,7 @@ async function handleAct(v, e) {
     if (a === 'edit') return viewForm(v, id);
     if (a === 'view') return viewProfile(v, id);
     if (a === 'qr') return showQr(v, id);
+    if (a === 'qrpng' || a === 'qrprint') { const st = D.students.find(x => x.id === id); if (!st) return; return a === 'qrpng' ? downloadQr(st) : printQr(st); }
     if (a === 'card') return previewCards(v, [id]);
     if (a === 'del') return doDelete(v, id);
     if (a === 'prev') { ST.page--; return drawList(cards); }
@@ -216,7 +254,8 @@ async function viewForm(v, id) {
       ops.push({ store: 'students', value: rec }, auditOp(s ? 'update' : 'create', rec.id));
       await DB.putMany(ops);
       toast(s ? 'Changes saved.' : 'Student saved. QR code created.', 'ok');
-      backToList(v);
+      D = await loadAll(); backToList(v);
+      if (!s) showQr(v, rec.id);
     } catch (err) {
       toast(err && err.name === 'ConstraintError' ? 'This roll number, registration number or QR already exists. Nothing was saved.' : 'Could not save: ' + (err.message || err), 'err');
     } finally { btn.disabled = false; }
@@ -229,21 +268,24 @@ async function viewProfile(v, id) {
   const s = D.students.find(x => x.id === id); if (!s) return viewStudents(v);
   const row = (k, val) => val ? `<dt>${k}</dt><dd>${esc(val)}</dd>` : '';
   v.innerHTML = `<h1>${esc(s.name)}</h1><div class="card"><div style="display:flex;gap:16px;flex-wrap:wrap"><div class="pf-photo">${s.photo ? `<img src="${s.photo}" alt="Student photo">` : 'No photo'}</div>
+    <div class="pf-qr"><div class="qrbox">${qrSvg(s.qrId)}</div><span class="note">Student QR code</span></div>
     <dl>${row('Father', s.fatherName)}${row('Roll number', s.roll)}${row('Registration', s.regNo)}${row('Class', D.cn(s.classId))}${row('Section', D.sn(s.sectionId))}${row('Department', s.department)}${row('Admitted', s.admissionDate)}${row('Phone', s.phone)}${row('Email', s.email)}${row('Address', s.address)}${row('Status', s.status)}${row('QR created', new Date(s.qrCreatedAt).toLocaleDateString())}</dl></div>
-    <div class="actions">${location.hash === '#idcards' ? '' : '<button class="btn" data-act="edit" data-id="' + s.id + '" type="button">Edit</button>'}<button class="btn ghost" data-act="qr" data-id="${s.id}" type="button">View QR</button><button class="btn ghost" data-act="card" data-id="${s.id}" type="button">ID card</button><button class="btn ghost" data-act="back" type="button">Back</button></div></div>`;
+    <div class="actions">${location.hash === '#idcards' ? '' : '<button class="btn" data-act="edit" data-id="' + s.id + '" type="button">Edit</button>'}<button class="btn ghost" data-act="qr" data-id="${s.id}" type="button">View QR</button><button class="btn ghost" data-act="qrpng" data-id="${s.id}" type="button">Download QR (PNG)</button><button class="btn ghost" data-act="qrprint" data-id="${s.id}" type="button">Print QR</button><button class="btn ghost" data-act="card" data-id="${s.id}" type="button">ID card</button><button class="btn ghost" data-act="back" type="button">Back</button></div></div>`;
   v.onchange = null;
   v.onclick = e => { const b = e.target.closest('[data-act]'); if (!b) return; if (b.dataset.act === 'back') backToList(v); else handleAct(v, e); };
 }
 
 function showQr(v, id) {
   const s = D.students.find(x => x.id === id); if (!s) return;
-  const m = modal(`<h2>${esc(s.name)}</h2><div class="qrbox">${qrSvg(s.qrId)}</div>
-    <p class="note">This QR holds only a random ID. Editing the profile never changes it.</p>
-    <div class="actions"><button class="btn" data-m="card" type="button">Print ID card</button><button class="btn ghost" data-m="regen" type="button">Regenerate QR</button><button class="btn ghost" data-m="x" type="button">Close</button></div>`);
+  const m = modal(`<h2>Student QR code</h2>${qrCardHtml(s)}
+    <p class="note" style="text-align:center">The QR holds only a random ID, never personal details. Editing the profile does not change it.</p>
+    <div class="actions"><button class="btn" data-m="print" type="button">Print QR</button><button class="btn" data-m="png" type="button">Download PNG</button><button class="btn ghost" data-m="card" type="button">Print ID card</button><button class="btn ghost" data-m="regen" type="button">Regenerate QR</button><button class="btn ghost" data-m="x" type="button">Close</button></div>`);
   m.onclick = async e => {
     const b = e.target.closest('[data-m]'); if (!b && e.target !== m) return;
     const k = b ? b.dataset.m : 'x';
     if (k === 'x') return m.remove();
+    if (k === 'print') return printQr(s);
+    if (k === 'png') return downloadQr(s);
     if (k === 'card') { m.remove(); return previewCards(v, [id]); }
     if (k === 'regen') {
       if (!await confirmBox('Regenerate QR code?', 'The old QR code and any printed ID card will stop working. Print a new card afterwards.', 'Regenerate', true)) return;
