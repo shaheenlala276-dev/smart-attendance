@@ -2,7 +2,7 @@
    Upgrades only ever ADD stores/indexes. Existing records are never deleted. */
 const DB_NAME = 'smart-attendance';
 const DB_VERSION = 2;
-const APP_VERSION = '0.4.0';
+const APP_VERSION = '0.5.0';
 
 // name: [keyPath, [[indexName, keyPath, unique], ...]]
 const SCHEMA = {
