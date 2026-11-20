@@ -1,6 +1,6 @@
 /* Smart Attendance - Phase 1 app shell: dashboard, institution setup, theme, PWA. */
 const NAV = [
-  ['dashboard', 'Dashboard', 'Home', 1], ['setup', 'Institution Setup', 'Setup', 1],
+  ['dashboard', 'Dashboard', 'Home', 1], ['setup', 'Institution Profile', 'Profile', 1],
   ['students', 'Students', 'Students', 2], ['teachers', 'Teachers', 'Teachers', 3],
   ['classes', 'Classes and Sections', 'Classes', 3], ['subjects', 'Subjects', 'Subjects', 3],
   ['assignments', 'Teacher Assignments', 'Assign', 3], ['idcards', 'QR Codes and ID Cards', 'ID Cards', 2],
@@ -33,6 +33,7 @@ async function applyTheme() {
   let t = await DB.getSetting('theme', null);
   if (!t) t = 'dark';
   document.documentElement.dataset.theme = t;
+  document.documentElement.dataset.fs = await DB.getSetting('fontSize', 'normal');
   document.querySelector('meta[name=theme-color]').content = t === 'dark' ? '#080D0C' : '#16423c';
 }
 async function toggleTheme() {
@@ -81,7 +82,7 @@ async function viewDashboard(v) {
   const att = typeof attendanceDashHtml === 'function' ? await attendanceDashHtml() : '';
   v.innerHTML = `
     <div class="card hero">${logo}<div><h1>${esc(institution.name)}</h1>
-    <p class="sub" style="margin:0">${esc(institution.type)}${institution.city ? ' - ' + esc(institution.city) : ''}</p></div></div>
+    <p class="sub" style="margin:0">${esc(institution.type)}${institution.city ? ' - ' + esc(institution.city) : ''}${institution.session ? ' - ' + esc(institution.session) : ''}</p><a href="#setup" class="note">Edit profile</a></div></div>
     ${att}
     <div class="grid" style="margin-top:14px">${stat(c.students, 'Students') + stat(c.teachers, 'Teachers') + stat(c.classes, 'Classes') + stat(c.subjects, 'Subjects') + stat(c.sessions, 'Sessions') + stat(c.attendance, 'Attendance records')}</div>
     <div class="card" style="margin-top:14px"><h2>System status</h2>
@@ -112,63 +113,51 @@ async function viewSetup(v) {
   const i = institution || {};
   let logo = i.logo || '';
   const types = ['School', 'College', 'Academy', 'University', 'Other'];
-  v.innerHTML = `<h1>Institution Setup</h1><p class="sub">${institution ? 'Update your institution details.' : 'Enter your institution details to begin. You can change them later.'}</p>
+  v.innerHTML = `<h1>Institution Profile</h1><p class="sub">${institution ? 'Edit your institution details. They appear on ID cards and printed reports.' : 'Enter your institution details to begin. You can change them later.'}</p>
   <form class="card" id="f" novalidate>
     <label for="name">Institution name *</label><input id="name" required maxlength="120" value="${esc(i.name)}" autocomplete="off">
     <div class="row"><div><label for="type">Type</label><select id="type">${types.map(t => `<option ${i.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
     <div><label for="city">City</label><input id="city" maxlength="80" value="${esc(i.city)}"></div></div>
     <label for="address">Address</label><input id="address" maxlength="200" value="${esc(i.address)}">
     <div class="row"><div><label for="phone">Phone</label><input id="phone" type="tel" maxlength="30" value="${esc(i.phone)}"></div>
-    <div><label for="session">Academic session</label><input id="session" maxlength="30" placeholder="e.g. 2026-27" value="${esc(i.session)}"></div></div>
+    <div><label for="email">Email</label><input id="email" type="email" maxlength="120" value="${esc(i.email)}"></div></div>
+    <div class="row"><div><label for="principal">Principal or administrator</label><input id="principal" maxlength="100" value="${esc(i.principal)}"></div>
+    <div><label for="session">Academic year</label><input id="session" maxlength="20" placeholder="e.g. 2026-27" value="${esc(i.session)}"></div></div>
+    <label for="desc">Description (optional)</label><textarea id="desc" rows="3" maxlength="300">${esc(i.description)}</textarea>
     <label for="logo">Logo (optional)</label><input id="logo" type="file" accept="image/*">
     <p class="note" id="logo-note">${logo ? 'A logo is saved. Choose a new file to replace it.' : 'The logo appears on ID cards and reports.'}</p>
-    <div class="actions"><button class="btn" id="save" type="submit">Save institution</button></div>
+    ${logo ? '<label class="chk2"><input type="checkbox" id="rmlogo"> Remove the current logo</label>' : ''}
+    <div class="err" id="ferr" aria-live="polite"></div>
+    <div class="actions"><button class="btn" id="save" type="submit">Save profile</button></div>
   </form>`;
   $('#logo').onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
-    try { logo = await readLogo(f); $('#logo-note').textContent = 'Logo ready. Save to keep it.'; }
+    try { logo = await readLogo(f); $('#logo-note').textContent = 'Logo ready. Save to keep it.'; const r = $('#rmlogo'); if (r) r.checked = false; }
     catch (err) { toast(err.message, 'err'); e.target.value = ''; }
   };
   $('#f').onsubmit = async (e) => {
     e.preventDefault();
-    const name = $('#name').value.trim();
-    if (!name) { toast('Enter the institution name.', 'err'); $('#name').focus(); return; }
+    const er = $('#ferr'); er.textContent = '';
+    const g = id => $('#' + id).value.trim(), name = g('name'), phone = g('phone'), email = g('email'), year = g('session');
+    const bad = name.length < 2 ? ['name', 'Enter the institution name (at least 2 characters).'] :
+      phone && !/^[+\d\s()-]{5,25}$/.test(phone) ? ['phone', 'Enter a valid phone number, for example +92 300 1234567.'] :
+      email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? ['email', 'Enter a valid email address.'] :
+      year && year.length < 4 ? ['session', 'Enter the academic year, for example 2026-27.'] : null;
+    if (bad) { er.textContent = bad[1]; $('#' + bad[0]).focus(); return; }
     const btn = $('#save'); btn.disabled = true; btn.textContent = 'Saving...';
     try {
-      const now = new Date().toISOString();
-      const rec = { id: i.id || uid(), name, type: $('#type').value, city: $('#city').value.trim(), address: $('#address').value.trim(),
-        phone: $('#phone').value.trim(), session: $('#session').value.trim(), logo, createdAt: i.createdAt || now, updatedAt: now };
+      const now = new Date().toISOString(), rm = $('#rmlogo');
+      const rec = { ...i, id: i.id || uid(), name, type: $('#type').value, city: g('city'), address: g('address'), phone, email, principal: g('principal'), session: year, description: g('desc'),
+        logo: rm && rm.checked ? '' : logo, createdAt: i.createdAt || now, updatedAt: now };
       await DB.putMany([{ store: 'institution', value: rec },
         { store: 'auditLogs', value: { id: uid(), at: now, action: institution ? 'update' : 'create', entity: 'institution', entityId: rec.id, details: null, by: 'admin' } }]);
       institution = rec;
-      toast('Institution saved.', 'ok');
+      toast('Institution profile saved.', 'ok');
       location.hash = '#dashboard';
       route();
     } catch (err) { toast('Could not save: ' + err.message, 'err'); }
-    finally { btn.disabled = false; btn.textContent = 'Save institution'; }
+    finally { btn.disabled = false; btn.textContent = 'Save profile'; }
   };
-}
-
-async function viewSettings(v) {
-  const persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false;
-  v.innerHTML = `<h1>Settings</h1><p class="sub">Application preferences.</p>
-  <div class="card"><h2>Appearance</h2><button class="btn ghost" id="t" type="button">Switch light / dark theme</button></div>
-  <div class="card"><h2>Data protection</h2><p>Persistent storage: <span class="pill ${persisted ? 'ok' : ''}">${persisted ? 'Granted' : 'Not granted'}</span></p>
-  <p class="note">Persistent storage asks the browser not to clear your data when the phone runs low on space. Clearing browser data erases records, so download a backup regularly from <a href="#backup">Backup and Data</a>.</p>
-  <button class="btn ghost" id="p" type="button">Request persistent storage</button></div>`;
-  $('#t').onclick = toggleTheme;
-  $('#p').onclick = async () => {
-    const ok = navigator.storage && navigator.storage.persist ? await navigator.storage.persist() : false;
-    toast(ok ? 'Persistent storage granted.' : 'The browser did not grant it. Installing the app often helps.', ok ? 'ok' : '');
-    viewSettings(v);
-  };
-}
-
-function viewAbout(v) {
-  v.innerHTML = `<h1>About Smart Attendance</h1><div class="card"><dl>
-  <dt>App version</dt><dd>${APP_VERSION}</dd><dt>Database schema</dt><dd>${DB_VERSION}</dd>
-  <dt>Storage</dt><dd>IndexedDB on this device only</dd><dt>Network use</dt><dd>None after installation</dd></dl>
-  <p class="note">Camera scanning (Phase 4) needs a secure context such as HTTPS. GitHub Pages provides HTTPS.</p></div>`;
 }
 
 function setupPWA() {
@@ -194,6 +183,7 @@ function setupPWA() {
     $('#view').innerHTML = `<div class="card"><h2>Database unavailable</h2><p>${esc(e.message)}</p><p class="note">Private browsing modes and some locked-down browsers block local storage. Open the app in a normal browser window.</p></div>`;
     return;
   }
+  if (typeof startSecurity === 'function') await startSecurity();
   $('#theme-side').onclick = toggleTheme;
   addEventListener('hashchange', route);
   setupPWA();
