@@ -200,3 +200,18 @@ label{margin-top:14px}
 .err:not(:empty){background:rgba(239,115,115,.12);border:1px solid var(--err);color:var(--err);border-radius:10px;padding:10px 12px;margin-top:12px;font-size:.92rem}
 .toast{border-left:4px solid var(--brand-soft);font-weight:500}.toast.err{border-left-color:#fff}
 a.sess:active{transform:scale(.99)}
+
+/* ===== Student QR: profile, download and print ===== */
+.qrcard{text-align:center}.qrcard b{display:block;font-size:1.05rem;margin-top:8px}.qrcard span{display:block;color:var(--muted);font-size:.9rem}
+.qrerr{padding:14px;text-align:center;color:#a00;background:#fff;font-size:.85rem;line-height:1.4}
+.pf-qr{width:150px}.pf-qr .qrbox{width:150px;margin:0 0 6px}
+#qr-print{display:none}
+@media print{
+  body.qr-printing #app,body.qr-printing #topbar,body.qr-printing #toasts,body.qr-printing .modal,body.qr-printing #lock{display:none!important}
+  body.qr-printing{background:#fff!important}
+  body.qr-printing #qr-print{display:block!important}
+  .qrp{width:100mm;margin:14mm auto 0;text-align:center;color:#000;font-family:system-ui,Arial,sans-serif;break-inside:avoid}
+  .qrp-h{font-weight:700;font-size:14pt;margin-bottom:6mm}
+  .qrp .qrbox{width:75mm;height:75mm;margin:0 auto;border:0;border-radius:0}.qrp .qrbox svg{width:75mm;height:75mm}
+  .qrp .qrcard b{font-size:17pt;margin-top:5mm;color:#000}.qrp .qrcard span{font-size:12pt;color:#000}
+}
