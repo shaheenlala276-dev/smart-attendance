@@ -3,7 +3,8 @@
 const ATT = { stream: null, timer: 0, gen: 0, running: false, busy: false, devs: [], devId: '', last: { p: '', t: 0 }, ac: null, sound: true, pt: 0 };
 const PAGE_A = 25, FULL = ['Present', 'Late', 'Absent'];
 const stCls = { Present: 'ok', Late: 'warn', Absent: 'bad', Active: 'ok', Paused: 'warn' };
-const pill = (t, c) => `<span class="pill ${c !== undefined ? c : stCls[t] || ''}">${esc(t)}</span>`;
+const SYM = { Present: '\u2713 ', Late: '\u25D4 ', Absent: '\u2715 ' };
+const pill = (t, c) => `<span class="pill ${c !== undefined ? c : stCls[t] || ''}">${SYM[t] || ''}${esc(t)}</span>`;
 const hm = iso => iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-';
 const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 const addHour = t => { const [h, m] = t.split(':').map(Number); return String((h + 1) % 24).padStart(2, '0') + ':' + String(m).padStart(2, '0'); };
@@ -92,18 +93,21 @@ async function viewAttendanceHub(v, args) {
   const X = await aLoad(), cnt = new Map();
   (await DB.getAll('attendance')).forEach(r => { if (r.status !== 'Absent') cnt.set(r.sessionId, (cnt.get(r.sessionId) || 0) + 1); });
   const list = X.sessions.slice().sort((a, b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)).slice(0, 15);
-  const subs = [...new Set(X.sessions.map(s => s.subject).filter(Boolean))];
+  const subs = [...new Set(X.sessions.map(s => s.subject).filter(Boolean))], lastC = await DB.getSetting('lastClassId', '');
+  const live = X.sessions.filter(s => s.status === 'Active' || s.status === 'Paused');
+  const liveBlock = live.length ? `<h2 class="gh">Continue where you left off</h2>${live.map(s => `<a class="sess live" href="#scanner/${s.id}"><div><b>${esc(s.name)}</b><span>${esc(sLabel(X, s))}${s.subject ? ', ' + esc(s.subject) : ''}</span></div><div class="tags">${pill(s.status)}<span class="pill ok">Continue</span></div></a>`).join('')}` : '';
   const row = s => `<a class="sess" href="#scanner/${s.id}"><div><b>${esc(s.name)}</b><span>${esc(sLabel(X, s))}${s.subject ? ', ' + esc(s.subject) : ''}</span><span>${esc(s.date)} ${esc(s.startTime || '')}-${esc(s.endTime || '')}</span></div><div class="tags">${pill(s.status)}<span class="pill">${cnt.get(s.id) || 0} present</span></div></a>`;
-  v.innerHTML = `<h1>QR Attendance</h1><p class="sub">Create a session, scan ID cards, then close the session.</p>
-  ${X.classes.length ? `<form class="card" id="nf" novalidate><h2>New attendance session</h2>
-    <div class="row"><div><label for="c">Class *</label><select id="c">${X.classes.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })).map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+  v.innerHTML = `<h1>Take Attendance</h1><p class="sub">Choose a class and start. Then scan each student's ID card, or tap Present, Late or Absent.</p>${liveBlock}
+  ${X.classes.length ? `<form class="card" id="nf" novalidate><h2>Start a new class</h2>
+    <div class="row"><div><label for="c">Class *</label><select id="c">${X.classes.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })).map(c => `<option value="${c.id}" ${c.id === lastC ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
     <div><label for="sc">Section</label><select id="sc"></select></div></div>
-    <div class="row"><div><label for="sb">Subject (optional)</label><input id="sb" maxlength="60" list="dl-sb" autocomplete="off"></div><div><label for="nm">Session name (optional)</label><input id="nm" maxlength="80" placeholder="Created automatically"></div></div>
+    <details class="more"><summary>Change subject, date or time (optional)</summary><div class="row"><div><label for="sb">Subject (optional)</label><input id="sb" maxlength="60" list="dl-sb" autocomplete="off"></div><div><label for="nm">Session name (optional)</label><input id="nm" maxlength="80" placeholder="Created automatically"></div></div>
     <datalist id="dl-sb">${subs.map(s => `<option value="${esc(s)}">`).join('')}</datalist>
     <div class="row"><div><label for="dt">Date *</label><input id="dt" type="date" value="${todayStr()}"></div>
     <div class="row2"><div><label for="t1">Start</label><input id="t1" type="time" value="${nowHM()}"></div><div><label for="t2">End</label><input id="t2" type="time" value="${addHour(nowHM())}"></div></div></div>
+    </details>
     <div class="err" id="nerr"></div>
-    <div class="actions"><button class="btn" data-go="1" type="submit">Create and start</button><button class="btn ghost" data-go="0" type="button" id="sched">Schedule only</button></div></form>`
+    <div class="actions"><button class="btn" data-go="1" type="submit">Start attendance now</button><button class="btn ghost" data-go="0" type="button" id="sched">Save for later</button></div></form>`
     : `<div class="card empty"><h2>No classes yet</h2><p>Classes are created when you register students.</p><a class="btn" href="#students">Add students</a></div>`}
   <h2 style="margin-top:18px">Recent sessions</h2>
   ${list.length ? list.map(row).join('') : '<div class="card empty"><p>No sessions yet. Create your first one above.</p></div>'}`;
@@ -118,10 +122,10 @@ async function viewAttendanceHub(v, args) {
     const now = new Date().toISOString();
     const s = { id: uid(), classId, sectionId, subject, date, startTime: t1, endTime: t2, status: start ? 'Active' : 'Scheduled', createdAt: now, updatedAt: now, startedAt: start ? now : null, closedAt: null, teacherId: null, createdBy: 'admin' };
     s.name = clean($('#nm').value) || `${sLabel(X, s)} ${subject || 'Lecture'} ${t1}`;
-    if (!roster(X, s).length) { er.textContent = 'This class has no active students.'; return; }
+    if (!roster(X, s).length) { er.textContent = 'This class has no active students yet. Add students first on the Students page.'; return; }
     if (X.sessions.some(o => o.classId === classId && (o.sectionId || '') === sectionId && o.date === date && o.startTime === t1)) { er.textContent = 'A session for this class already exists at that date and time.'; return; }
     const c = start && activeConflict(X, s); if (c) { er.textContent = `"${c.name}" is already active for this class. Close it first.`; return; }
-    try { await DB.putMany([{ store: 'sessions', value: s }, recAud('session_create', 'session', s.id, { session: s.name })]); location.hash = '#scanner/' + s.id; }
+    try { await DB.putMany([{ store: 'sessions', value: s }, recAud('session_create', 'session', s.id, { session: s.name })]); await DB.setSetting('lastClassId', classId); location.hash = '#scanner/' + s.id; }
     catch (e) { toast('Could not create the session: ' + e.message, 'err'); }
   };
   nf.onsubmit = e => { e.preventDefault(); go(true); };
@@ -140,9 +144,9 @@ async function viewSession(v, id) {
 }
 function drawSession(v) {
   const { X, sess } = SES, st = sess.status;
-  v.innerHTML = `<div class="head"><div><h1>${esc(sess.name)}</h1><p class="sub">${pill(st)} ${esc(sLabel(X, sess))}${sess.subject ? ', ' + esc(sess.subject) : ''}, ${esc(sess.date)} ${esc(sess.startTime)}${sess.endTime ? '-' + esc(sess.endTime) : ''}</p></div><a class="btn ghost" href="#scanner">All sessions</a></div>
+  v.innerHTML = `<div class="head"><div><h1>${esc(sess.name)}</h1><p class="sub">${pill(st)} ${esc(sLabel(X, sess))}${sess.subject ? ', ' + esc(sess.subject) : ''}, ${esc(sess.date)} ${esc(sess.startTime)}${sess.endTime ? '-' + esc(sess.endTime) : ''}</p></div><a class="btn ghost" href="#scanner">Back to sessions</a></div>
   <div class="grid" id="sstats"></div><div class="bar"><i id="sbar"></i></div>
-  <div class="actions" style="margin:0 0 14px">${st === 'Scheduled' ? '<button class="btn" data-ctl="Active" type="button">Start session</button>' : ''}${st === 'Active' ? '<button class="btn ghost" data-ctl="Paused" type="button">Pause</button>' : ''}${st === 'Paused' ? '<button class="btn" data-ctl="Active" type="button">Resume</button>' : ''}${st === 'Active' || st === 'Paused' ? '<button class="btn danger" data-ctl="close" type="button">Close session</button>' : ''}${st === 'Completed' ? '<a class="btn ghost" href="#history">View records</a>' : ''}</div>
+  <div class="actions" style="margin:0 0 14px">${st === 'Scheduled' ? '<button class="btn" data-ctl="Active" type="button">Start session</button>' : ''}${st === 'Active' ? '<button class="btn ghost" data-ctl="Paused" type="button">Pause scanning</button>' : ''}${st === 'Paused' ? '<button class="btn" data-ctl="Active" type="button">Resume scanning</button>' : ''}${st === 'Active' || st === 'Paused' ? '<button class="btn danger" data-ctl="close" type="button">Finish and close</button>' : ''}${st === 'Completed' ? '<a class="btn ghost" href="#history">View records</a>' : ''}</div>
   ${st === 'Active' ? `<div class="card"><h2>Scan ID cards</h2><div class="cam" id="camwrap"><video id="cam" playsinline muted></video><div class="frame"></div><div class="scanline"></div><div class="rpanel" id="rp" aria-live="polite"></div></div>
     <p class="note" id="camst" style="text-align:center">Camera is off.</p>
     <div class="actions" style="justify-content:center;margin-top:8px"><button class="btn" data-cam="start" type="button">Start camera</button><button class="btn ghost" data-cam="stop" type="button">Stop</button><button class="btn ghost" data-cam="switch" type="button">Switch camera</button></div>
@@ -150,7 +154,7 @@ function drawSession(v) {
     <label class="chk2"><input type="checkbox" id="snd" ${ATT.sound ? 'checked' : ''}> Confirmation sound</label></div>`
     : `<div class="card"><p class="note" style="margin:0">${st === 'Scheduled' ? 'Start the session to open the scanner.' : st === 'Paused' ? 'Scanning is paused. Resume the session to scan. You can still mark students below.' : 'This session is closed. Use Attendance Records to correct entries.'}</p></div>`}
   <div class="card"><h2>Students</h2><div class="toolbar2"><input id="rq" type="search" placeholder="Search name or roll number" aria-label="Search students"><select id="rf" aria-label="Filter"><option value="">All</option><option>Unmarked</option><option>Present</option><option>Late</option><option>Absent</option></select></div>
-    <p class="note">P = Present, L = Late, A = Absent. Changing an existing mark asks for a reason and is saved in the audit history.</p><div id="rl"></div></div>`;
+    <p class="note">Tap Present, Late or Absent for each student. Changing a mark that is already saved asks for a reason and is kept in the audit history.</p><div id="rl"></div></div>`;
   v.onclick = sesClick;
   v.onsubmit = e => { if (e.target.id === 'mf') { e.preventDefault(); manualEntry(); } };
   v.oninput = e => { if (e.target.id === 'rq') { SES.q = e.target.value; drawRoster(); } };
@@ -177,7 +181,7 @@ function drawRoster() {
   el.innerHTML = rows.map(s => { const r = recs.get(s.id);
     return `<div class="srow ro"><div class="av">${s.photo ? `<img src="${s.photo}" alt="">` : esc(initials(s.name))}</div>
     <div class="si"><b>${esc(s.name)}</b><span>Roll ${esc(s.roll)}</span><span>${r ? pill(r.status) + ' ' + (r.time ? hm(r.time) : '') + ' ' + esc(r.method === 'QR' ? 'QR' : r.method === 'Auto' ? 'Closed as absent' : 'Manual') : '<span class="pill">Not marked</span>'}</span></div>
-    <div class="acts">${live ? FULL.map(x => `<button class="btn sm ${r && r.status === x ? '' : 'ghost'}" data-mark="${x}" data-sid="${s.id}" type="button" aria-label="${x}: ${esc(s.name)}">${x[0]}</button>`).join('') : ''}</div></div>`; }).join('');
+    <div class="acts">${live ? FULL.map(x => `<button class="btn sm ${r && r.status === x ? 'on-' + x : 'ghost'}" data-mark="${x}" data-sid="${s.id}" type="button" aria-label="${x}: ${esc(s.name)}">${x}</button>`).join('') : ''}</div></div>`; }).join('');
 }
 async function sesClick(e) {
   const b = e.target.closest('[data-ctl],[data-cam],[data-mark]'); if (!b) return;
@@ -342,7 +346,7 @@ function drawRList() {
     const all = recFiltered(); total = all.length; const pages = Math.max(1, Math.ceil(total / PAGE_A)); if (RS.page > pages) RS.page = pages;
     html = all.slice((RS.page - 1) * PAGE_A, RS.page * PAGE_A).map(a => { const s = X.stu.get(a.studentId) || { name: '(removed student)', roll: '-' }, se = X.sessions.find(x => x.id === a.sessionId);
       return `<div class="rrow"><div><b>${esc(s.name)}</b><span>Roll ${esc(s.roll)}, ${esc(X.cn(a.classId))} ${esc(X.sn(s.sectionId))}</span><span>${esc(a.date)} ${a.time ? hm(a.time) : ''}, ${esc(se ? se.name : 'Session')}</span>${a.note ? `<span>Note: ${esc(a.note)}</span>` : ''}${(a.history || []).length ? `<span>Corrected ${a.history.length} time${a.history.length > 1 ? 's' : ''}</span>` : ''}</div>
-      <div class="tags">${pill(a.status)}<span class="pill">${esc(a.method === 'Auto' ? 'Closed as absent' : a.method)}</span><button class="btn ghost sm" data-fix="${a.id}" type="button">Correct</button></div></div>`; }).join('');
+      <div class="tags">${pill(a.status)}<span class="pill">${esc(a.method === 'Auto' ? 'Closed as absent' : a.method)}</span><button class="btn ghost sm" data-fix="${a.id}" type="button">Correct mistake</button></div></div>`; }).join('');
     if (!total) html = `<div class="card empty"><h2>${RS.rows.length ? 'No records match' : 'No attendance records yet'}</h2><p>${RS.rows.length ? 'Change the search or filters.' : 'Records appear here after you scan or mark students in a session.'}</p></div>`;
   }
   el.innerHTML = html; $('#rpg').innerHTML = pagerHtml(total, RS.page);
