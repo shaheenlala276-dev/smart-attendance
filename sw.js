@@ -1,8 +1,8 @@
 /* Smart Attendance service worker.
    To release an update: change CACHE_VERSION. Old caches are removed; IndexedDB is never touched. */
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v9';
 const CACHE = 'smart-attendance-' + CACHE_VERSION;
-const ASSETS = ['./', 'index.html', 'style.css', 'db.js', 'lib/jsQR.js', 'students.js', 'attendance.js', 'data.js', 'reports.js', 'security.js', 'settings.js', 'app.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
+const ASSETS = ['./', 'index.html', 'style.css', 'db.js', 'lib/jsQR.js', 'students.js', 'attendance.js', 'data.js', 'reports.js', 'security.js', 'settings.js', 'guide.js', 'app.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(ASSETS.map(a => c.add(new Request(a, { cache: 'reload' })).catch(() => {})))).then(() => self.skipWaiting()));
