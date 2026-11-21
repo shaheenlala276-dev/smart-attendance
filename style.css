@@ -359,3 +359,16 @@ input[type=checkbox],input[type=radio]{width:20px;height:20px;min-height:0;accen
 a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;text-align:center}
 .qas{margin-bottom:14px}
 div:has(> [data-act=add]){margin-bottom:14px}
+
+/* ===== Start Here guide and help button ===== */
+.hbtn{margin-left:auto;width:40px;height:40px;border-radius:50%;border:1px solid rgba(234,234,234,.3);background:transparent;color:#EAEAEA;font:700 1.05rem inherit;cursor:pointer;flex-shrink:0}
+.hbtn:hover{border-color:#08D9D6;color:#08D9D6}
+.nextstep{border-color:#08D9D6;background:linear-gradient(180deg,rgba(8,217,214,.1),var(--card))}
+.nextstep h2{font-size:1.25rem;margin:10px 0 6px}.nextstep p{margin:0;color:var(--muted)}
+.gstep{display:flex;gap:14px;align-items:flex-start}
+.gstep.now{border-color:#08D9D6;box-shadow:0 0 0 1px rgba(8,217,214,.3),var(--shadow)}
+.gnum{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:1.1rem;border:2px solid var(--line);flex-shrink:0}
+.gstep.now .gnum{background:#08D9D6;border-color:#08D9D6;color:#1A1E26}
+.gstep.done .gnum{background:rgba(8,217,214,.16);border-color:#08D9D6;color:var(--brand-soft)}
+.gbody{min-width:0;flex:1}.gbody h2{margin:0 0 4px;font-size:1.1rem}.gbody p{margin:0;color:var(--muted)}
+.gstep.done .gbody h2{color:var(--muted)}
