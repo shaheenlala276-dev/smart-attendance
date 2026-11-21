@@ -6,10 +6,10 @@ const NAV = [
   ['assignments', 'Teacher Assignments', 'Assign', 3], ['idcards', 'ID Cards and QR Codes', 'ID Cards', 2],
   ['scanner', 'Take Attendance', 'Attendance', 4], ['history', 'Attendance Records', 'Records', 4],
   ['reports', 'Reports', 'Reports', 5], ['backup', 'Backup and Restore', 'Backup', 6],
-  ['settings', 'Settings', 'Settings', 1], ['about', 'About and Help', 'About', 1], ['more', 'All sections', 'More', 1]
+  ['settings', 'Settings', 'Settings', 1], ['about', 'About and Help', 'About', 1], ['more', 'All sections', 'More', 1], ['start', 'Start Here', 'Start', 1]
 ];
 const BOTTOM = [['dashboard', 'Home'], ['students', 'Students'], ['scanner', 'Attendance'], ['history', 'Records'], ['more', 'More']];
-const GROUPS = [['', ['dashboard']], ['Daily work', ['scanner', 'history']], ['People', ['students', 'idcards']], ['Reports and data', ['reports', 'backup']], ['Setup and help', ['setup', 'settings', 'about']], ['Coming later', ['teachers', 'classes', 'subjects', 'assignments']]];
+const GROUPS = [['', ['start', 'dashboard']], ['Daily work', ['scanner', 'history']], ['People', ['students', 'idcards']], ['Reports and data', ['reports', 'backup']], ['Setup and help', ['setup', 'settings', 'about']], ['Coming later', ['teachers', 'classes', 'subjects', 'assignments']]];
 const IC = {
   dashboard: '<path d="M3 11l9-8 9 8"/><path d="M5 9.5V20h14V9.5"/>',
   students: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3.2-6 6.5-6s6 2 6.5 6"/><path d="M16 4.5a3.5 3.5 0 010 7M18 14c2 .6 3.3 2.6 3.5 6"/>',
@@ -22,6 +22,7 @@ const IC = {
   about: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
   setup: '<path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6M3 21h18"/>',
   more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+  start: '<path d="M5 21V4"/><path d="M5 4h11l-2.5 4 2.5 4H5"/>',
   soon: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
 };
 const ico = id => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IC[id] || IC.soon}</svg>`;
@@ -83,6 +84,7 @@ async function route() {
     else if (page === 'settings') await viewSettings(v);
     else if (page === 'about') viewAbout(v);
     else if (page === 'more') viewMore(v);
+    else if (page === 'start') await viewStart(v);
     else viewSoon(v, page);
   } catch (e) {
     v.innerHTML = `<div class="card"><h2>Something went wrong</h2><p>${esc(e.message)}</p><p class="note">Your saved data was not changed. Reload the page and try again.</p><a class="btn" href="#dashboard">Go to Dashboard</a></div>`;
@@ -98,10 +100,10 @@ function viewSoon(v, id) {
 }
 
 function viewMore(v) {
-  const D = { scanner: ['Take Attendance', 'Start a class and scan ID cards'], history: ['Attendance Records', 'See, search and correct attendance'], students: ['Students', 'Add, edit and search students'], idcards: ['ID Cards and QR Codes', 'View QR codes and print ID cards'], reports: ['Reports', 'Daily, weekly and monthly reports'], backup: ['Backup and Restore', 'Save or restore all your data'], setup: ['Institution Profile', 'Name, logo and contact details'], settings: ['Settings', 'Theme, PIN lock and preferences'], about: ['About and Help', 'Help and app information'] };
+  const D = { start: ['Start Here', 'Step-by-step guide for new users'], scanner: ['Take Attendance', 'Start a class and scan ID cards'], history: ['Attendance Records', 'See, search and correct attendance'], students: ['Students', 'Add, edit and search students'], idcards: ['ID Cards and QR Codes', 'View QR codes and print ID cards'], reports: ['Reports', 'Daily, weekly and monthly reports'], backup: ['Backup and Restore', 'Save or restore all your data'], setup: ['Institution Profile', 'Name, logo and contact details'], settings: ['Settings', 'Theme, PIN lock and preferences'], about: ['About and Help', 'Help and app information'] };
   const item = id => `<a class="mgi" href="#${id}">${ico(id)}<div><b>${esc(D[id][0])}</b><span>${esc(D[id][1])}</span></div></a>`;
   v.innerHTML = `<h1>All sections</h1><p class="sub">Everything in Smart Attendance in one place.</p>` +
-    [['Daily work', ['scanner', 'history']], ['People', ['students', 'idcards']], ['Reports and data', ['reports', 'backup']], ['Setup and help', ['setup', 'settings', 'about']]].map(([t, ids]) => `<h2 class="gh">${t}</h2><div class="mg">${ids.map(item).join('')}</div>`).join('') +
+    [['New here?', ['start']], ['Daily work', ['scanner', 'history']], ['People', ['students', 'idcards']], ['Reports and data', ['reports', 'backup']], ['Setup and help', ['setup', 'settings', 'about']]].map(([t, ids]) => `<h2 class="gh">${t}</h2><div class="mg">${ids.map(item).join('')}</div>`).join('') +
     '<p class="note" style="margin-top:18px">Coming in later updates: teacher accounts, class and subject management, and teacher assignments.</p>';
 }
 
@@ -112,8 +114,7 @@ async function viewDashboard(v) {
   const att = typeof attendanceDashHtml === 'function' ? await attendanceDashHtml() : '';
   const qa = (href, id, t) => `<a class="qa" href="${href}">${ico(id)}<span>${t}</span></a>`;
   const qas = `<h2 class="gh">What would you like to do?</h2><div class="qas">${qa('#scanner', 'scanner', 'Take attendance') + qa('#students', 'students', 'Add or find students') + qa('#reports', 'reports', 'View reports') + qa('#idcards', 'idcards', 'Print ID cards')}</div>`;
-  const step = (done, href, t) => `<a class="step ${done ? 'done' : ''}" href="${href}"><span class="chkc">${done ? '\u2713' : ''}</span><span>${t}</span></a>`;
-  const start = c.students > 0 && c.sessions > 0 ? '' : `<div class="card"><h2>Getting started</h2><p class="note" style="margin-top:0">Follow these steps. Each one opens the right screen.</p>${step(c.students > 0, '#students', 'Add your students')}${step(false, '#idcards', 'Print ID cards for the students (optional)')}${step(c.sessions > 0, '#scanner', 'Take your first attendance')}</div>`;
+  const start = typeof guideCardHtml === 'function' ? await guideCardHtml(c) : '';
   v.innerHTML = `
     <div class="card hero">${logo}<div><h1>${esc(institution.name)}</h1>
     <p class="sub" style="margin:0">${esc(institution.type)}${institution.city ? ' - ' + esc(institution.city) : ''}${institution.session ? ' - ' + esc(institution.session) : ''}</p><a href="#setup" class="note">Edit profile</a></div></div>
@@ -186,9 +187,9 @@ async function viewSetup(v) {
         logo: rm && rm.checked ? '' : logo, createdAt: i.createdAt || now, updatedAt: now };
       await DB.putMany([{ store: 'institution', value: rec },
         { store: 'auditLogs', value: { id: uid(), at: now, action: institution ? 'update' : 'create', entity: 'institution', entityId: rec.id, details: null, by: 'admin' } }]);
-      institution = rec;
+      const first = !institution; institution = rec;
       toast('Institution profile saved.', 'ok');
-      location.hash = '#dashboard';
+      location.hash = first ? '#start' : '#dashboard';
       route();
     } catch (err) { toast('Could not save: ' + err.message, 'err'); }
     finally { btn.disabled = false; btn.textContent = 'Save profile'; }
