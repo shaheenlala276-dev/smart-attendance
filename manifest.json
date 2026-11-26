@@ -1,7 +1,7 @@
 {
   "name": "Smart Attendance",
   "short_name": "Attendance",
-  "description": "Offline QR attendance for schools and colleges",
+  "description": "Offline QR attendance for schools",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
