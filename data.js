@@ -44,8 +44,8 @@ function validateBackup(b) {
     });
   }
   if (errors.length) return { errors, warnings };
-  if (st.institution.length > 1) add(errors, 'The backup contains more than one institution.');
-  if (!st.institution.length) warnings.push('The backup has no institution profile. You will need to set it up again.');
+  if (st.institution.length > 1) add(errors, 'The backup contains more than one school.');
+  if (!st.institution.length) warnings.push('The backup has no school details. You will need to set it up again.');
   const uniq = (store, fn, label) => { const m = new Set(); st[store].forEach(r => { const v = fn(r); if (v == null || v === '') return; if (m.has(v)) add(errors, `Duplicate ${label}: ${v}.`); m.add(v); }); };
   uniq('students', r => r.qrId, 'QR identifier'); uniq('students', r => r.rollKey, 'roll number in a class'); uniq('students', r => r.regNo, 'registration number');
   uniq('classes', r => r.name, 'class name'); uniq('users', r => r.username, 'username'); uniq('attendance', r => r.sessionId + '|' + r.studentId, 'attendance entry for a student in a session');
@@ -62,13 +62,13 @@ async function healthCheck() {
   const ids = s => new Set(d[s].map(r => r.id)), cls = ids('classes'), sec = ids('sections'), stu = ids('students'), ses = ids('sessions');
   const push = (sev, title, list, fix) => { if (list.length) issues.push({ sev, title, n: list.length, ex: list.slice(0, 5), fix }); };
   const nm = r => r.name || r.id;
-  if (!d.institution.length) issues.push({ sev: 'warn', title: 'No institution profile saved', n: 1, ex: [], fix: 'Open Institution Profile and save your details.' });
+  if (!d.institution.length) issues.push({ sev: 'warn', title: 'No school details saved', n: 1, ex: [], fix: 'Open School Details and save your details.' });
   push('error', 'Students with missing required details', d.students.filter(r => !r.name || !r.roll || !r.classId).map(nm), 'Open the student in Students and complete the details.');
   push('error', 'Students without a QR identifier', d.students.filter(r => !r.qrId).map(nm), 'Open the student profile and use Regenerate QR.');
   push('error', 'Students linked to a class that no longer exists', d.students.filter(r => r.classId && !cls.has(r.classId)).map(nm), 'Edit each student and choose the class again, or restore a recent backup.');
   push('error', 'Students linked to a missing section', d.students.filter(r => r.sectionId && !sec.has(r.sectionId)).map(nm), 'Edit each student and choose the section again.');
   push('error', 'Sessions linked to a missing class', d.sessions.filter(r => r.classId && !cls.has(r.classId)).map(nm), 'Restore a recent backup if these sessions matter.');
-  push('warn', 'Sessions left open from an earlier day', d.sessions.filter(r => (r.status === 'Active' || r.status === 'Paused') && r.date < today).map(r => `${r.name} (${r.date})`), 'Open QR Attendance, open the session and close it.');
+  push('warn', 'Sessions left open from an earlier day', d.sessions.filter(r => (r.status === 'Active' || r.status === 'Paused') && r.date < today).map(r => `${r.name} (${r.date})`), 'Open Take Attendance, open the session and close it.');
   push('error', 'Attendance records for a missing student', d.attendance.filter(r => !stu.has(r.studentId)).map(r => r.id.slice(0, 8)), 'Restore a recent backup. Records are kept, not deleted.');
   push('error', 'Attendance records for a missing session', d.attendance.filter(r => !ses.has(r.sessionId)).map(r => r.id.slice(0, 8)), 'Restore a recent backup. Records are kept, not deleted.');
   push('error', 'Attendance records with an unknown status or no date', d.attendance.filter(r => !STATUSES.includes(r.status) || !r.date).map(r => r.id.slice(0, 8)), 'Correct them in Attendance Records.');
@@ -82,7 +82,7 @@ async function healthCheck() {
 async function viewBackup(v) {
   const cur = await DB.counts(), keys = ['students', 'classes', 'sections', 'sessions', 'attendance', 'auditLogs'], lab = { students: 'Students', classes: 'Classes', sections: 'Sections', sessions: 'Sessions', attendance: 'Attendance records', auditLogs: 'Audit entries' };
   v.innerHTML = `<h1>Backup and Data</h1><p class="sub">Keep a copy of your data outside this device.</p>
-  <div class="card"><h2>Export backup</h2><p>Saves every record (${cur.students} students, ${cur.attendance} attendance records, institution profile, settings and audit history) in one JSON file.</p>
+  <div class="card"><h2>Export backup</h2><p>Saves every record (${cur.students} students, ${cur.attendance} attendance records, school details, settings and audit history) in one JSON file.</p>
     <p class="note">The file contains student information and photos. Store it safely. PIN lock data is never included. CSV exports are separate and are not complete backups.</p>
     <div class="actions" style="margin-top:10px"><button class="btn" id="bx" type="button">Download backup</button></div></div>
   <div class="card"><h2>Restore backup</h2><p class="note">Restoring replaces all data on this device with the contents of the backup. You will see a preview first, and nothing changes until you confirm.</p>
@@ -106,7 +106,7 @@ async function viewBackup(v) {
     let b; try { b = JSON.parse(await f.text()); } catch (err) { box.innerHTML = '<p class="err">This file could not be read. It is not valid JSON, so nothing was changed.</p>'; return; }
     const { errors, warnings } = validateBackup(b);
     if (errors.length) { box.innerHTML = `<div class="issue error"><b>This backup cannot be restored</b>${errors.slice(0, 12).map(x => `<span>${esc(x)}</span>`).join('')}${errors.length > 12 ? `<span>and ${errors.length - 12} more problems</span>` : ''}</div><p class="note">Your current data was not changed.</p>`; return; }
-    box.innerHTML = `<div class="card" style="margin:12px 0 0"><h2>Backup preview</h2><dl><dt>File</dt><dd>${esc(f.name)}</dd><dt>Created</dt><dd>${esc(new Date(b.createdAt).toLocaleString())}</dd><dt>App version</dt><dd>${esc(b.appVersion || '-')}</dd><dt>Database version</dt><dd>${b.schemaVersion}</dd><dt>Institution</dt><dd>${esc(b.institutionName || '-')}</dd></dl>
+    box.innerHTML = `<div class="card" style="margin:12px 0 0"><h2>Backup preview</h2><dl><dt>File</dt><dd>${esc(f.name)}</dd><dt>Created</dt><dd>${esc(new Date(b.createdAt).toLocaleString())}</dd><dt>App version</dt><dd>${esc(b.appVersion || '-')}</dd><dt>Database version</dt><dd>${b.schemaVersion}</dd><dt>School</dt><dd>${esc(b.institutionName || '-')}</dd></dl>
       <div class="cmp" style="margin-top:12px"><b>Record type</b><b>Backup</b><b>Now</b>${keys.map(k => `<span>${lab[k]}</span><span>${b.stores[k].length}</span><span>${cur[k]}</span>`).join('')}</div>
       ${warnings.map(w => `<div class="issue warn"><span>${esc(w)}</span></div>`).join('')}
       <label class="chk2"><input type="checkbox" id="pre" checked> Download a backup of my current data first</label>
