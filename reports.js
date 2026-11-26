@@ -104,7 +104,7 @@ async function viewReports(v) {
   $('#sx').onclick = () => {
     const c = $('#sc2').value, s = $('#ss2').value, rows = X.students.filter(x => (!c || x.classId === c) && (!s || x.status === s)).sort((a, b) => X.cn(a.classId).localeCompare(X.cn(b.classId), undefined, { numeric: true }) || byRoll(a, b));
     if (!rows.length) return toast('No students match.', 'err');
-    downloadFile(`students-${stamp()}.csv`, toCsv([['Name', 'Father name', 'Roll number', 'Registration number', 'Class', 'Section', 'Department', 'Phone', 'Email', 'Address', 'Admission date', 'Status'], ...rows.map(x => [x.name, x.fatherName, x.roll, x.regNo, X.cn(x.classId), X.sn(x.sectionId), x.department, x.phone, x.email, x.address, x.admissionDate, x.status])]), 'text/csv;charset=utf-8');
+    downloadFile(`students-${stamp()}.csv`, toCsv([['Name', 'Father name', 'Roll number', 'Registration number', 'Class', 'Section', 'Phone', 'Email', 'Address', 'Admission date', 'Status'], ...rows.map(x => [x.name, x.fatherName, x.roll, x.regNo, X.cn(x.classId), X.sn(x.sectionId), x.phone, x.email, x.address, x.admissionDate, x.status])]), 'text/csv;charset=utf-8');
     toast(`${rows.length} students exported.`, 'ok');
   };
 }
