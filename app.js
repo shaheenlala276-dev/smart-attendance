@@ -1,15 +1,17 @@
 /* Smart Attendance - Phase 1 app shell: dashboard, institution setup, theme, PWA. */
 const NAV = [
-  ['dashboard', 'Dashboard', 'Home', 1], ['setup', 'Institution Profile', 'Profile', 1],
+  ['dashboard', 'Home', 'Home', 1], ['setup', 'School Details', 'School', 1],
   ['students', 'Students', 'Students', 2], ['teachers', 'Teachers', 'Teachers', 3],
   ['classes', 'Classes and Sections', 'Classes', 3], ['subjects', 'Subjects', 'Subjects', 3],
   ['assignments', 'Teacher Assignments', 'Assign', 3], ['idcards', 'ID Cards and QR Codes', 'ID Cards', 2],
   ['scanner', 'Take Attendance', 'Attendance', 4], ['history', 'Attendance Records', 'Records', 4],
-  ['reports', 'Reports', 'Reports', 5], ['backup', 'Backup and Restore', 'Backup', 6],
+  ['reports', 'Records and Reports', 'Reports', 5], ['backup', 'Backup and Restore', 'Backup', 6],
   ['settings', 'Settings', 'Settings', 1], ['about', 'About and Help', 'About', 1], ['more', 'All sections', 'More', 1], ['start', 'Start Here', 'Start', 1]
 ];
-const BOTTOM = [['dashboard', 'Home'], ['students', 'Students'], ['scanner', 'Attendance'], ['history', 'Records'], ['more', 'More']];
-const GROUPS = [['', ['start', 'dashboard']], ['Daily work', ['scanner', 'history']], ['People', ['students', 'idcards']], ['Reports and data', ['reports', 'backup']], ['Setup and help', ['setup', 'settings', 'about']], ['Coming later', ['teachers', 'classes', 'subjects', 'assignments']]];
+const BOTTOM = [['dashboard', 'Home'], ['students', 'Students'], ['scanner', 'Attendance'], ['reports', 'Reports'], ['settings', 'Settings']];
+const SIDE = [['dashboard', 'Home'], ['students', 'Students'], ['scanner', 'Take Attendance'], ['reports', 'Records and Reports'], ['backup', 'Backup and Restore'], ['settings', 'Settings']];
+/* pages that live under one of the main menu items */
+const ALIAS = { history: 'reports', setup: 'settings', about: 'settings', idcards: 'students', start: 'dashboard', more: 'dashboard', teachers: 'dashboard', classes: 'dashboard', subjects: 'dashboard', assignments: 'dashboard' };
 const IC = {
   dashboard: '<path d="M3 11l9-8 9 8"/><path d="M5 9.5V20h14V9.5"/>',
   students: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3.2-6 6.5-6s6 2 6.5 6"/><path d="M16 4.5a3.5 3.5 0 010 7M18 14c2 .6 3.3 2.6 3.5 6"/>',
@@ -41,13 +43,13 @@ function toast(msg, kind) {
 }
 
 function renderNav(cur) {
-  const nav = id => NAV.find(n => n[0] === id), cp = cur === 'scanner' ? 'scanner' : cur;
-  const link = n => `<a class="nl ${n[3] > 2 && ['teachers', 'classes', 'subjects', 'assignments'].includes(n[0]) ? 'soon' : ''}" href="#${n[0]}" ${n[0] === cp ? 'aria-current="page"' : ''}>${ico(n[0])}<span>${esc(n[1])}</span></a>`;
-  $('#nav-side').innerHTML = GROUPS.map(([t, ids]) => (t ? `<div class="ng">${esc(t)}</div>` : '') + ids.map(id => link(nav(id))).join('')).join('');
-  const bc = BOTTOM.some(b => b[0] === cur) ? cur : 'more';
-  $('#nav-bottom').innerHTML = BOTTOM.map(([id, label]) => `<a class="nl" href="#${id}" ${id === bc ? 'aria-current="page"' : ''}>${ico(id)}<span>${esc(label)}</span></a>`).join('');
+  const nav = id => NAV.find(n => n[0] === id), sc = ALIAS[cur] || cur, bc = cur === 'backup' ? 'settings' : sc;
+  const link = (id, label, c) => `<a class="nl" href="#${id}" ${id === c ? 'aria-current="page"' : ''}>${ico(id)}<span>${esc(label)}</span></a>`;
+  $('#nav-side').innerHTML = SIDE.map(([id, l]) => link(id, l, sc)).join('');
+  $('#nav-bottom').innerHTML = BOTTOM.map(([id, l]) => link(id, l, bc)).join('');
   const t = $('#top-title'), n = nav(cur); if (t && n) t.textContent = n[1];
 }
+const segHtml = page => '<div class="seg">' + [['history', 'Attendance records'], ['reports', 'Reports and CSV']].map(([id, l]) => `<a href="#${id}" class="${id === page ? 'on' : ''}">${l}</a>`).join('') + '</div>';
 
 async function applyTheme() {
   let t = await DB.getSetting('theme', null);
@@ -70,6 +72,7 @@ async function route() {
   if (!institution && page !== 'setup' && page !== 'about') page = 'setup';
   renderNav(page);
   const v = $('#view');
+  v.dataset.page = page;
   v.onclick = v.onchange = v.oninput = v.onsubmit = null;
   const lt = setTimeout(() => { v.innerHTML = LOADING; }, 180);
   try {
@@ -90,6 +93,7 @@ async function route() {
     v.innerHTML = `<div class="card"><h2>Something went wrong</h2><p>${esc(e.message)}</p><p class="note">Your saved data was not changed. Reload the page and try again.</p><a class="btn" href="#dashboard">Go to Dashboard</a></div>`;
   }
   clearTimeout(lt);
+  if ((page === 'history' || page === 'reports') && v.firstElementChild) v.insertAdjacentHTML('afterbegin', segHtml(page));
   $('#main').focus({ preventScroll: true });
   window.scrollTo(0, 0);
 }
@@ -100,7 +104,7 @@ function viewSoon(v, id) {
 }
 
 function viewMore(v) {
-  const D = { start: ['Start Here', 'Step-by-step guide for new users'], scanner: ['Take Attendance', 'Start a class and scan ID cards'], history: ['Attendance Records', 'See, search and correct attendance'], students: ['Students', 'Add, edit and search students'], idcards: ['ID Cards and QR Codes', 'View QR codes and print ID cards'], reports: ['Reports', 'Daily, weekly and monthly reports'], backup: ['Backup and Restore', 'Save or restore all your data'], setup: ['Institution Profile', 'Name, logo and contact details'], settings: ['Settings', 'Theme, PIN lock and preferences'], about: ['About and Help', 'Help and app information'] };
+  const D = { start: ['Start Here', 'Step-by-step guide for new users'], scanner: ['Take Attendance', 'Start a class and scan ID cards'], history: ['Attendance Records', 'See, search and correct attendance'], students: ['Students', 'Add, edit and search students'], idcards: ['ID Cards and QR Codes', 'View QR codes and print ID cards'], reports: ['Reports', 'Daily, weekly and monthly reports'], backup: ['Backup and Restore', 'Save or restore all your data'], setup: ['School Details', 'Name, logo and contact details'], settings: ['Settings', 'Theme, PIN lock and preferences'], about: ['About and Help', 'Help and app information'] };
   const item = id => `<a class="mgi" href="#${id}">${ico(id)}<div><b>${esc(D[id][0])}</b><span>${esc(D[id][1])}</span></div></a>`;
   v.innerHTML = `<h1>All sections</h1><p class="sub">Everything in Smart Attendance in one place.</p>` +
     [['New here?', ['start']], ['Daily work', ['scanner', 'history']], ['People', ['students', 'idcards']], ['Reports and data', ['reports', 'backup']], ['Setup and help', ['setup', 'settings', 'about']]].map(([t, ids]) => `<h2 class="gh">${t}</h2><div class="mg">${ids.map(item).join('')}</div>`).join('') +
@@ -109,7 +113,7 @@ function viewMore(v) {
 
 async function viewDashboard(v) {
   const c = await DB.counts();
-  const logo = institution.logo ? `<img src="${institution.logo}" alt="Institution logo">` : `<div class="logo-ph">No logo</div>`;
+  const logo = institution.logo ? `<img src="${institution.logo}" alt="School logo">` : `<div class="logo-ph">No logo</div>`;
   const stat = (n, l) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`;
   const att = typeof attendanceDashHtml === 'function' ? await attendanceDashHtml() : '';
   const qa = (href, id, t) => `<a class="qa" href="${href}">${ico(id)}<span>${t}</span></a>`;
@@ -117,10 +121,9 @@ async function viewDashboard(v) {
   const start = typeof guideCardHtml === 'function' ? await guideCardHtml(c) : '';
   v.innerHTML = `
     <div class="card hero">${logo}<div><h1>${esc(institution.name)}</h1>
-    <p class="sub" style="margin:0">${esc(institution.type)}${institution.city ? ' - ' + esc(institution.city) : ''}${institution.session ? ' - ' + esc(institution.session) : ''}</p><a href="#setup" class="note">Edit profile</a></div></div>
+    <p class="sub" style="margin:0">${esc([institution.city, institution.session].filter(Boolean).join(' - ') || 'School')}</p><a href="#setup" class="note">Edit school details</a></div></div>
     ${start}${qas}
     ${att}
-    <h2 class="gh">Totals</h2><div class="grid">${stat(c.students, 'Students') + stat(c.classes, 'Classes') + stat(c.sessions, 'Class sessions') + stat(c.attendance, 'Attendance records')}</div>
     <div class="card" style="margin-top:14px"><h2>App status</h2>
       <p><span class="pill ${navigator.onLine ? '' : 'ok'}">${navigator.onLine ? 'Online' : 'Offline'}</span>
       <span class="pill ${'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'ok' : ''}" id="sw-pill">${'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Ready to work offline' : 'Offline mode not ready yet. Open the app once while online.'}</span>
@@ -148,16 +151,14 @@ function readLogo(file) {
 async function viewSetup(v) {
   const i = institution || {};
   let logo = i.logo || '';
-  const types = ['School', 'College', 'Academy', 'University', 'Other'];
-  v.innerHTML = `<h1>Institution Profile</h1><p class="sub">${institution ? 'Edit your institution details. They appear on ID cards and printed reports.' : 'Enter your institution details to begin. You can change them later.'}</p>
+  v.innerHTML = `<h1>School Details</h1><p class="sub">${institution ? 'Edit your school details. They appear on ID cards and printed reports.' : 'Enter your school details to begin. You can change them later.'}</p>
   <form class="card" id="f" novalidate>
-    <label for="name">Institution name *</label><input id="name" required maxlength="120" value="${esc(i.name)}" autocomplete="off">
-    <div class="row"><div><label for="type">Type</label><select id="type">${types.map(t => `<option ${i.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
-    <div><label for="city">City</label><input id="city" maxlength="80" value="${esc(i.city)}"></div></div>
+    <label for="name">School name *</label><input id="name" required maxlength="120" value="${esc(i.name)}" autocomplete="off">
+    <div class="row"><div><label for="city">City</label><input id="city" maxlength="80" value="${esc(i.city)}"></div></div>
     <label for="address">Address</label><input id="address" maxlength="200" value="${esc(i.address)}">
     <div class="row"><div><label for="phone">Phone</label><input id="phone" type="tel" maxlength="30" value="${esc(i.phone)}"></div>
     <div><label for="email">Email</label><input id="email" type="email" maxlength="120" value="${esc(i.email)}"></div></div>
-    <div class="row"><div><label for="principal">Principal or administrator</label><input id="principal" maxlength="100" value="${esc(i.principal)}"></div>
+    <div class="row"><div><label for="principal">Principal's name</label><input id="principal" maxlength="100" value="${esc(i.principal)}"></div>
     <div><label for="session">Academic year</label><input id="session" maxlength="20" placeholder="e.g. 2026-27" value="${esc(i.session)}"></div></div>
     <label for="desc">Description (optional)</label><textarea id="desc" rows="3" maxlength="300">${esc(i.description)}</textarea>
     <label for="logo">Logo (optional)</label><input id="logo" type="file" accept="image/*">
@@ -175,7 +176,7 @@ async function viewSetup(v) {
     e.preventDefault();
     const er = $('#ferr'); er.textContent = '';
     const g = id => $('#' + id).value.trim(), name = g('name'), phone = g('phone'), email = g('email'), year = g('session');
-    const bad = name.length < 2 ? ['name', 'Enter the institution name (at least 2 characters).'] :
+    const bad = name.length < 2 ? ['name', 'Enter the school name (at least 2 characters).'] :
       phone && !/^[+\d\s()-]{5,25}$/.test(phone) ? ['phone', 'Enter a valid phone number, for example +92 300 1234567.'] :
       email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? ['email', 'Enter a valid email address.'] :
       year && year.length < 4 ? ['session', 'Enter the academic year, for example 2026-27.'] : null;
@@ -183,12 +184,12 @@ async function viewSetup(v) {
     const btn = $('#save'); btn.disabled = true; btn.textContent = 'Saving...';
     try {
       const now = new Date().toISOString(), rm = $('#rmlogo');
-      const rec = { ...i, id: i.id || uid(), name, type: $('#type').value, city: g('city'), address: g('address'), phone, email, principal: g('principal'), session: year, description: g('desc'),
+      const rec = { ...i, id: i.id || uid(), name, type: 'School', city: g('city'), address: g('address'), phone, email, principal: g('principal'), session: year, description: g('desc'),
         logo: rm && rm.checked ? '' : logo, createdAt: i.createdAt || now, updatedAt: now };
       await DB.putMany([{ store: 'institution', value: rec },
         { store: 'auditLogs', value: { id: uid(), at: now, action: institution ? 'update' : 'create', entity: 'institution', entityId: rec.id, details: null, by: 'admin' } }]);
       const first = !institution; institution = rec;
-      toast('Institution profile saved.', 'ok');
+      toast('School details saved.', 'ok');
       location.hash = first ? '#start' : '#dashboard';
       route();
     } catch (err) { toast('Could not save: ' + err.message, 'err'); }
