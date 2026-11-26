@@ -1487,10 +1487,10 @@ async function viewForm(v, id) {
   <form class="card" id="sf" novalidate>
     <div class="row">${fld('n', 'Full name *', i.name, 'maxlength="100" autocomplete="off"')}${fld('fa', "Father's name *", i.fatherName, 'maxlength="100" autocomplete="off"')}</div>
     <div class="row">${fld('roll', 'Roll number *', i.roll, 'maxlength="20" autocomplete="off"')}${fld('reg', 'Registration number', i.regNo, 'maxlength="40" autocomplete="off"')}</div>
-    <div class="row">${fld('cls', 'Class *', s ? D.cn(s.classId) : '', 'maxlength="40" list="dl-c" placeholder="e.g. 9 or BS-CS" autocomplete="off"')}${fld('sec', 'Section *', s ? D.sn(s.sectionId) : '', 'maxlength="20" list="dl-s" placeholder="e.g. A" autocomplete="off"')}</div>
+    <div class="row">${fld('cls', 'Class *', s ? D.cn(s.classId) : '', 'maxlength="40" list="dl-c" placeholder="e.g. 9 or Nursery" autocomplete="off"')}${fld('sec', 'Section *', s ? D.sn(s.sectionId) : '', 'maxlength="20" list="dl-s" placeholder="e.g. A" autocomplete="off"')}</div>
     <datalist id="dl-c">${D.classes.map(c => `<option value="${esc(c.name)}">`).join('')}</datalist>
     <datalist id="dl-s">${[...new Set(D.sections.map(x => x.name))].map(n => `<option value="${esc(n)}">`).join('')}</datalist>
-    <div class="row">${fld('dep', 'Department (if applicable)', i.department, 'maxlength="60"')}
+    <div class="row"><input type="hidden" id="dep" value="${esc(i.department)}">
       <div><label for="adm">Admission date *</label><input id="adm" type="date" value="${esc(i.admissionDate || todayStr())}"><div class="err" id="e-adm"></div></div></div>
     <div class="row">${fld('phone', 'Phone', i.phone, 'type="tel" maxlength="20"')}${fld('em', 'Email', i.email, 'type="email" maxlength="100"')}</div>
     ${fld('ad', 'Address', i.address, 'maxlength="200"')}
@@ -1558,7 +1558,7 @@ async function viewProfile(v, id) {
   const row = (k, val) => val ? `<dt>${k}</dt><dd>${esc(val)}</dd>` : '';
   v.innerHTML = `<h1>${esc(s.name)}</h1><div class="card"><div style="display:flex;gap:16px;flex-wrap:wrap"><div class="pf-photo">${s.photo ? `<img src="${s.photo}" alt="Student photo">` : 'No photo'}</div>
     <div class="pf-qr"><div class="qrbox">${qrSvg(s.qrId)}</div><span class="note">Student QR code</span></div>
-    <dl>${row('Father', s.fatherName)}${row('Roll number', s.roll)}${row('Registration', s.regNo)}${row('Class', D.cn(s.classId))}${row('Section', D.sn(s.sectionId))}${row('Department', s.department)}${row('Admitted', s.admissionDate)}${row('Phone', s.phone)}${row('Email', s.email)}${row('Address', s.address)}${row('Status', s.status)}${row('QR created', new Date(s.qrCreatedAt).toLocaleDateString())}</dl></div>
+    <dl>${row('Father', s.fatherName)}${row('Roll number', s.roll)}${row('Registration', s.regNo)}${row('Class', D.cn(s.classId))}${row('Section', D.sn(s.sectionId))}${row('Admitted', s.admissionDate)}${row('Phone', s.phone)}${row('Email', s.email)}${row('Address', s.address)}${row('Status', s.status)}${row('QR created', new Date(s.qrCreatedAt).toLocaleDateString())}</dl></div>
     <div class="actions">${location.hash === '#idcards' ? '' : '<button class="btn" data-act="edit" data-id="' + s.id + '" type="button">Edit</button>'}<button class="btn ghost" data-act="qr" data-id="${s.id}" type="button">View QR</button><button class="btn ghost" data-act="qrpng" data-id="${s.id}" type="button">Download QR (PNG)</button><button class="btn ghost" data-act="qrprint" data-id="${s.id}" type="button">Print QR</button><button class="btn ghost" data-act="card" data-id="${s.id}" type="button">ID card</button><button class="btn ghost" data-act="back" type="button">Back</button></div></div>`;
   v.onchange = null;
   v.onclick = e => { const b = e.target.closest('[data-act]'); if (!b) return; if (b.dataset.act === 'back') backToList(v); else handleAct(v, e); };
@@ -1601,7 +1601,7 @@ async function doDelete(v, id) {
 function cardHtml(s) {
   const inst = institution || {}, contact = [inst.address, inst.phone].filter(Boolean).join(', ');
   const line = (k, val) => val ? `<div><b>${k}:</b> ${esc(val)}</div>` : '';
-  return `<div class="idc"><div class="idc-h">${inst.logo ? `<img src="${inst.logo}" alt="">` : ''}<div><b>${esc(inst.name || 'Institution')}</b>${contact ? `<small>${esc(contact)}</small>` : ''}</div></div>
+  return `<div class="idc"><div class="idc-h">${inst.logo ? `<img src="${inst.logo}" alt="">` : ''}<div><b>${esc(inst.name || 'School')}</b>${contact ? `<small>${esc(contact)}</small>` : ''}</div></div>
     <div class="idc-b"><div class="idc-p">${s.photo ? `<img src="${s.photo}" alt="">` : '<svg viewBox="0 0 24 24" width="60%" fill="#999" aria-hidden="true"><circle cx="12" cy="8" r="4.5"/><path d="M3 22c0-5 4-8 9-8s9 3 9 8z"/></svg>'}</div>
     <div class="idc-d"><span class="nm">${esc(s.name)}</span>${line('Father', s.fatherName)}${line('Roll', s.roll)}${line('Reg', s.regNo)}${line('Class', D.cn(s.classId) + ' ' + D.sn(s.sectionId))}${line('Dept', s.department)}</div>
     <div class="idc-q">${qrSvg(s.qrId)}<small>Scan for Attendance</small></div></div></div>`;
