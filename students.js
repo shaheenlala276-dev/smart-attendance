@@ -1409,8 +1409,8 @@ function drawPage(v, mode) {
     <div class="card toolbar">
       <input id="q" type="search" placeholder="Search name, father or roll number" value="${esc(ST.q)}" aria-label="Search students">
       <select id="fc" aria-label="Filter by class"><option value="">All classes</option>${D.classes.map(c => `<option value="${c.id}" ${ST.cls === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
-      <select id="fs" aria-label="Filter by section"><option value="">All sections</option>${secOptions()}</select>
-      <select id="ft" aria-label="Filter by status"><option value="">Any status</option><option ${ST.status === 'Active' ? 'selected' : ''}>Active</option><option ${ST.status === 'Inactive' ? 'selected' : ''}>Inactive</option></select>
+      <details class="morefilters"><summary>More filters</summary><select id="fs" aria-label="Filter by section"><option value="">All sections</option>${secOptions()}</select>
+      <select id="ft" aria-label="Filter by status"><option value="">Any status</option><option ${ST.status === 'Active' ? 'selected' : ''}>Active</option><option ${ST.status === 'Inactive' ? 'selected' : ''}>Inactive</option></select></details>
     </div>
     <div class="actions" id="bulk" style="margin:0 0 12px"></div>
     <div id="list"></div><div class="pager" id="pager"></div>`;
