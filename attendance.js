@@ -146,12 +146,12 @@ function drawSession(v) {
   const { X, sess } = SES, st = sess.status;
   v.innerHTML = `<div class="head"><div><h1>${esc(sess.name)}</h1><p class="sub">${pill(st)} ${esc(sLabel(X, sess))}${sess.subject ? ', ' + esc(sess.subject) : ''}, ${esc(sess.date)} ${esc(sess.startTime)}${sess.endTime ? '-' + esc(sess.endTime) : ''}</p></div><a class="btn ghost" href="#scanner">Back to sessions</a></div>
   <div class="grid" id="sstats"></div><div class="bar"><i id="sbar"></i></div>
-  <div class="actions" style="margin:0 0 14px">${st === 'Scheduled' ? '<button class="btn" data-ctl="Active" type="button">Start session</button>' : ''}${st === 'Active' ? '<button class="btn ghost" data-ctl="Paused" type="button">Pause scanning</button>' : ''}${st === 'Paused' ? '<button class="btn" data-ctl="Active" type="button">Resume scanning</button>' : ''}${st === 'Active' || st === 'Paused' ? '<button class="btn danger" data-ctl="close" type="button">Finish and close</button>' : ''}${st === 'Completed' ? '<a class="btn ghost" href="#history">View records</a>' : ''}</div>
+  <div class="actions" style="margin:0 0 14px">${st === 'Scheduled' ? '<button class="btn" data-ctl="Active" type="button">Start session</button>' : ''}${st === 'Paused' ? '<button class="btn" data-ctl="Active" type="button">Resume scanning</button>' : ''}${st === 'Active' || st === 'Paused' ? '<button class="btn danger" data-ctl="close" type="button">Finish and close</button>' : ''}${st === 'Completed' ? '<a class="btn ghost" href="#history">View records</a>' : ''}</div>
   ${st === 'Active' ? `<div class="card"><h2>Scan ID cards</h2><div class="cam" id="camwrap"><video id="cam" playsinline muted></video><div class="frame"></div><div class="scanline"></div><div class="rpanel" id="rp" aria-live="polite"></div></div>
     <p class="note" id="camst" style="text-align:center">Camera is off.</p>
-    <div class="actions" style="justify-content:center;margin-top:8px"><button class="btn" data-cam="start" type="button">Start camera</button><button class="btn ghost" data-cam="stop" type="button">Stop</button><button class="btn ghost" data-cam="switch" type="button">Switch camera</button></div>
-    <form id="mf" class="row2" style="margin-top:14px;align-items:end"><div><label for="mi">Manual entry: roll number</label><input id="mi" maxlength="40" autocomplete="off" inputmode="text"></div><button class="btn" type="submit">Mark present</button></form>
-    <label class="chk2"><input type="checkbox" id="snd" ${ATT.sound ? 'checked' : ''}> Confirmation sound</label></div>`
+    <div class="actions" style="justify-content:center;margin-top:8px"><button class="btn" data-cam="start" type="button">Start camera</button></div>
+    <details class="more camopts"><summary>Camera not working or wrong camera?</summary><div class="actions" style="margin-top:8px"><button class="btn ghost" data-cam="switch" type="button">Switch camera</button><button class="btn ghost" data-cam="stop" type="button">Turn camera off</button></div></details>
+    <form id="mf" class="row2" style="margin-top:14px;align-items:end"><div><label for="mi">Manual entry: roll number</label><input id="mi" maxlength="40" autocomplete="off" inputmode="text"></div><button class="btn" type="submit">Mark present</button></form></div>`
     : `<div class="card"><p class="note" style="margin:0">${st === 'Scheduled' ? 'Start the session to open the scanner.' : st === 'Paused' ? 'Scanning is paused. Resume the session to scan. You can still mark students below.' : 'This session is closed. Use Attendance Records to correct entries.'}</p></div>`}
   <div class="card"><h2>Students</h2><div class="toolbar2"><input id="rq" type="search" placeholder="Search name or roll number" aria-label="Search students"><select id="rf" aria-label="Filter"><option value="">All</option><option>Unmarked</option><option>Present</option><option>Late</option><option>Absent</option></select></div>
     <p class="note">Tap Present, Late or Absent for each student. Changing a mark that is already saved asks for a reason and is kept in the audit history.</p><div id="rl"></div></div>`;
@@ -306,10 +306,11 @@ function drawRecords(v) {
   ${RS.tab === 'rec' ? `<div class="card toolbar2">
     <input id="fq" type="search" placeholder="Search name or roll" value="${esc(RS.q)}" aria-label="Search">
     <select id="fc" aria-label="Class"><option value="">All classes</option>${X.classes.map(c => `<option value="${c.id}" ${RS.cls === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+    <details class="morefilters"><summary>More filters</summary>
     <select id="fse" aria-label="Session"><option value="">All sessions</option>${sess.map(s => `<option value="${s.id}" ${RS.ses === s.id ? 'selected' : ''}>${esc(s.date + ' ' + s.name)}</option>`).join('')}</select>
     <select id="fst" aria-label="Status"><option value="">Any status</option>${FULL.map(s => `<option ${RS.st === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
     <label class="dl">From <input id="ff" type="date" value="${RS.from}"></label><label class="dl">To <input id="ft" type="date" value="${RS.to}"></label>
-    <select id="so" aria-label="Sort"><option value="new" ${RS.sort === 'new' ? 'selected' : ''}>Newest first</option><option value="old" ${RS.sort === 'old' ? 'selected' : ''}>Oldest first</option><option value="name" ${RS.sort === 'name' ? 'selected' : ''}>Student name</option></select></div>` : ''}
+    <select id="so" aria-label="Sort"><option value="new" ${RS.sort === 'new' ? 'selected' : ''}>Newest first</option><option value="old" ${RS.sort === 'old' ? 'selected' : ''}>Oldest first</option><option value="name" ${RS.sort === 'name' ? 'selected' : ''}>Student name</option></select></details></div>` : ''}
   <div id="rlist"></div><div class="pager" id="rpg"></div>`;
   v.onclick = e => {
     const t = e.target.closest('[data-tab],[data-pg],[data-fix]'); if (!t) return;
@@ -375,7 +376,7 @@ async function attendanceDashHtml() {
     const pr = recs.filter(r => r.status !== 'Absent').length, w = enrolled ? Math.min(100, Math.round(pr / enrolled * 100)) : 0;
     liveHtml += `<a class="card sess live" href="#scanner/${s.id}"><div><b>${esc(s.name)}</b><span>${esc(cn.get(s.classId) || '-')}${s.subject ? ', ' + esc(s.subject) : ''}, ${esc(s.date)}</span><span>${pr} of ${enrolled} present</span><div class="bar"><i style="width:${w}%"></i></div></div><div class="tags">${pill(s.status)}<span class="pill ok">Open</span></div></a>`;
   }
-  const act = recent.slice().sort((x, y) => ((y.updatedAt || '') + y.id).localeCompare((x.updatedAt || '') + x.id)).slice(0, 8);
+  const act = recent.slice().sort((x, y) => ((y.updatedAt || '') + y.id).localeCompare((x.updatedAt || '') + x.id)).slice(0, 5);
   return `<h2 style="margin:6px 0 10px">Attendance today, ${esc(today)}</h2>
   <div class="grid">${tile(students.length, 'Registered students') + tile(p, 'Present', 'ok') + tile(l, 'Late', 'warn') + tile(a, 'Absent', 'bad') + tile(pct, 'Attendance today')}</div>
   <div style="margin-top:14px">${liveHtml || '<div class="card empty" style="padding:16px"><p style="margin:0 0 10px">No active session right now.</p><a class="btn" href="#scanner">Start attendance</a></div>'}</div>
