@@ -3,20 +3,27 @@ async function viewSettings(v) {
   const [theme, fs, sound, pin, min, last] = await Promise.all([DB.getSetting('theme', 'dark'), DB.getSetting('fontSize', 'normal'), DB.getSetting('sound', true), getPin(), DB.getSetting('autoLockMin', 5), DB.getSetting('lastBackupAt', '')]);
   const persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false;
   const opt = (arr, cur) => arr.map(([a, b]) => `<option value="${a}" ${String(cur) === String(a) ? 'selected' : ''}>${b}</option>`).join('');
-  v.innerHTML = `<h1>Settings</h1><p class="sub">Preferences are saved on this device.</p>
-  <div class="card"><h2>Display</h2><div class="row"><div><label for="st">Theme</label><select id="st">${opt([['dark', 'Dark black and emerald'], ['light', 'Light']], theme)}</select></div>
-    <div><label for="sf">Text size</label><select id="sf">${opt([['normal', 'Normal'], ['large', 'Large']], fs)}</select></div></div></div>
-  <div class="card"><h2>Attendance scanner</h2><label class="chk2" style="margin:0"><input type="checkbox" id="ss" ${sound ? 'checked' : ''}> Play a sound and vibrate after each scan</label></div>
-  <div class="card"><h2>Security</h2><p>PIN lock: ${pin ? '<span class="pill ok">On</span>' : '<span class="pill">Off</span>'}</p>
-    <p class="note">A PIN keeps casual users out of the app on a shared device. It is not server-grade security: someone with full access to the device and browser tools can still reach the stored data.</p>
-    <div class="actions" style="margin:10px 0 14px">${pin ? '<button class="btn" data-a="lock" type="button">Lock now</button><button class="btn ghost" data-a="chg" type="button">Change PIN</button><button class="btn ghost" data-a="rec" type="button">New recovery code</button><button class="btn ghost" data-a="off" type="button">Turn off PIN</button>' : '<button class="btn" data-a="set" type="button">Set a PIN</button>'}</div>
-    <label for="sl">Lock automatically after no activity</label><select id="sl" ${pin ? '' : 'disabled'}>${opt([[0, 'Never'], [1, '1 minute'], [2, '2 minutes'], [5, '5 minutes'], [10, '10 minutes'], [15, '15 minutes'], [30, '30 minutes']], min)}</select>
-    <p class="note">The app does not lock while the scanner camera is running.</p></div>
-  <div class="card"><h2>School and data</h2><div class="actions" style="margin:0 0 10px"><a class="btn ghost" href="#setup">School details</a><a class="btn ghost" href="#backup">Backup and restore</a><a class="btn ghost" href="#backup">Data health check</a><a class="btn ghost" href="#reports">Reports and export</a></div>
-    <p class="note">Last backup downloaded from this device: ${last ? esc(new Date(last).toLocaleString()) : 'never'}.</p>
-    <p>Persistent storage: <span class="pill ${persisted ? 'ok' : ''}">${persisted ? 'Granted' : 'Not granted'}</span></p><p class="note">Asks the browser not to clear your data when the phone is low on space. Clearing browser data still erases records, so keep backups.</p>
-    <button class="btn ghost" data-a="persist" type="button">Request persistent storage</button></div>
-  <div class="card"><h2>Application</h2><dl><dt>Version</dt><dd>${APP_VERSION}</dd><dt>Database version</dt><dd>${DB_VERSION}</dd></dl><div class="actions"><a class="btn ghost" href="#start">Steps to get started</a><a class="btn ghost" href="#about">About and help</a></div></div>`;
+  v.innerHTML = `<h1>Settings</h1><p class="sub">Only the main options are shown here.</p>
+  <div class="mg">
+    <a class="mgi" href="#setup">${ico('setup')}<div><b>School details</b><span>Name, logo and contact details</span></div></a>
+    <a class="mgi" href="#backup">${ico('backup')}<div><b>Backup and restore</b><span>Save a copy of all your data</span></div></a>
+    <a class="mgi" href="#start">${ico('start')}<div><b>Steps to get started</b><span>Help for new users</span></div></a>
+    <a class="mgi" href="#about">${ico('about')}<div><b>About and help</b><span>Version and how-to</span></div></a>
+  </div>
+  <h2 class="gh">Preferences</h2>
+  <div class="card"><label for="st" style="margin-top:0">Theme</label><select id="st">${opt([['dark', 'Dark'], ['light', 'Light']], theme)}</select>
+    <label class="chk2" style="margin-top:16px"><input type="checkbox" id="ss" ${sound ? 'checked' : ''}> Sound after each scan</label></div>
+  <h2 class="gh">Security</h2>
+  <div class="card"><p style="margin-top:0">PIN lock: ${pin ? '<span class="pill ok">On</span>' : '<span class="pill">Off</span>'}</p>
+    <p class="note">A PIN keeps casual users out of the app. It is not server-grade security.</p>
+    <div class="actions" style="margin:10px 0 0">${pin ? '<button class="btn" data-a="lock" type="button">Lock now</button><button class="btn ghost" data-a="chg" type="button">Change PIN</button><button class="btn ghost" data-a="off" type="button">Turn off PIN</button>' : '<button class="btn" data-a="set" type="button">Set a PIN</button>'}</div>
+    ${pin ? `<label for="sl">Lock automatically after</label><select id="sl">${opt([[0, 'Never'], [1, '1 minute'], [2, '2 minutes'], [5, '5 minutes'], [10, '10 minutes'], [15, '15 minutes'], [30, '30 minutes']], min)}</select>` : ''}</div>
+  <details class="more"><summary>Advanced</summary>
+    <label for="sf">Text size</label><select id="sf">${opt([['normal', 'Normal'], ['large', 'Large']], fs)}</select>
+    <p class="note" style="margin-top:14px">Last backup downloaded: ${last ? esc(new Date(last).toLocaleString()) : 'never'}.</p>
+    <p>Persistent storage: <span class="pill ${persisted ? 'ok' : ''}">${persisted ? 'Granted' : 'Not granted'}</span></p>
+    <div class="actions" style="margin:0 0 12px"><button class="btn ghost" data-a="persist" type="button">Request persistent storage</button>${pin ? '<button class="btn ghost" data-a="rec" type="button">New recovery code</button>' : ''}<a class="btn ghost" href="#backup">Check data health</a></div>
+    <p class="note">Version ${APP_VERSION}, database ${DB_VERSION}.</p></details>`;
   const again = () => viewSettings(v);
   v.onchange = async e => {
     const id = e.target.id, val = e.target.value;
