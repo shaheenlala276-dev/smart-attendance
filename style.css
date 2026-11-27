@@ -503,3 +503,47 @@ label{font-size:.85rem;font-weight:500;color:var(--muted);margin:16px 4px 6px}
 #nav-bottom .nl[aria-current=page]:hover{color:#08D9D6}
 .hero{flex-wrap:nowrap}.hero>div{min-width:0}.hero h1{font-size:1.55rem;letter-spacing:-.025em}
 .hero img,.logo-ph{width:56px;height:56px}
+
+/* =====================================================================
+   GLASS INTERFACE  (frosted, translucent surfaces like iPhone)
+   Same colors as before: cyan #08D9D6, charcoal #252A34, pink #FF2E63, light gray #EAEAEA
+   ===================================================================== */
+:root[data-theme=dark]{--glass:rgba(255,255,255,.075);--glass-strong:rgba(255,255,255,.13);--glass-line:rgba(255,255,255,.17);--glass-hi:rgba(255,255,255,.24);--glass-sheet:rgba(44,50,62,.74);--glass-bar:rgba(44,50,62,.55);--glass-shadow:0 10px 34px rgba(0,0,0,.30)}
+:root:not([data-theme=dark]){--glass:rgba(255,255,255,.62);--glass-strong:rgba(255,255,255,.85);--glass-line:rgba(255,255,255,.9);--glass-hi:rgba(255,255,255,1);--glass-sheet:rgba(255,255,255,.82);--glass-bar:rgba(44,50,62,.62);--glass-shadow:0 10px 30px rgba(37,42,52,.13)}
+/* soft colored light behind the glass, so the blur is visible */
+body::before{content:"";position:fixed;inset:-10%;z-index:-1;pointer-events:none;background:radial-gradient(430px 430px at 86% 6%,rgba(8,217,214,.40),transparent 70%),radial-gradient(400px 400px at 6% 58%,rgba(255,46,99,.24),transparent 70%),radial-gradient(540px 540px at 72% 100%,rgba(8,217,214,.20),transparent 70%)}
+:root:not([data-theme=dark]) body::before{opacity:.5}
+/* glass cards */
+.card,.stat,.qa,.mgi,.nextstep,.gstep{background:var(--glass);border:1px solid var(--glass-line);box-shadow:var(--glass-shadow),inset 0 1px 0 var(--glass-hi);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%)}
+.srow,.sess,.rrow{background:var(--glass);border:1px solid var(--glass-line);box-shadow:inset 0 1px 0 var(--glass-hi);-webkit-backdrop-filter:blur(12px) saturate(160%);backdrop-filter:blur(12px) saturate(160%)}
+.nextstep,.sess.live,.gstep.now{border-color:rgba(8,217,214,.7);box-shadow:var(--glass-shadow),inset 0 0 0 1px rgba(8,217,214,.35),inset 0 1px 0 var(--glass-hi)}
+.nextstep{background:linear-gradient(180deg,rgba(8,217,214,.16),var(--glass))}
+/* floating glass tab bar */
+#nav-bottom,:root[data-theme=dark] #nav-bottom{left:14px;right:14px;bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:6px;border:1px solid var(--glass-line);border-radius:30px;background:var(--glass-bar);box-shadow:0 14px 40px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.24);-webkit-backdrop-filter:blur(30px) saturate(190%);backdrop-filter:blur(30px) saturate(190%)}
+#nav-bottom .nl{border-radius:24px;color:rgba(234,234,234,.8)}
+#nav-bottom .nl[aria-current=page]{background:rgba(8,217,214,.2);box-shadow:inset 0 0 0 1px rgba(8,217,214,.4);color:#08D9D6}
+@media(max-width:859px){#main{padding-bottom:124px}}
+/* glass sidebar on tablets and computers */
+#sidebar{background:var(--glass-bar);border:1px solid var(--glass-line);-webkit-backdrop-filter:blur(30px) saturate(190%);backdrop-filter:blur(30px) saturate(190%)}
+@media(min-width:860px){#sidebar{margin:12px 0 12px 12px;top:12px;height:calc(100vh - 24px);border-radius:26px;box-shadow:0 14px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.2)}}
+/* glass sheets and dialogs */
+.modal{background:rgba(10,12,16,.42)}
+.mbox{background:var(--glass-sheet);border-top:1px solid var(--glass-line);box-shadow:0 -10px 40px rgba(0,0,0,.35),inset 0 1px 0 var(--glass-hi);-webkit-backdrop-filter:blur(34px) saturate(190%);backdrop-filter:blur(34px) saturate(190%)}
+/* glass buttons and controls */
+.btn{box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 6px 18px rgba(8,217,214,.28)}
+.btn.ghost{background:var(--glass-strong);border:1px solid var(--glass-line);box-shadow:inset 0 1px 0 var(--glass-hi);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.btn.danger{box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 6px 18px rgba(255,46,99,.28)}
+.seg,.tabs{background:var(--glass);border:1px solid var(--glass-line);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+details.more{background:var(--glass);border:1px solid var(--glass-line);border-radius:16px;padding:6px 14px}
+.hbtn{background:var(--glass-strong);border:1px solid var(--glass-line);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+a.hbtn{display:grid;place-items:center;text-decoration:none;width:40px;height:40px;border-radius:50%}
+.gbtn{left:12px;right:auto}.gbtn .ic{width:20px;height:20px}
+/* fewer options at first sight */
+details.morefilters{flex:1 1 100%;width:100%}
+details.morefilters summary{cursor:pointer;color:var(--brand-soft);font-weight:600;min-height:40px;display:flex;align-items:center}
+details.morefilters select,details.morefilters .dl{margin-top:8px;width:100%}
+details.morefilters .dl input{flex:1}
+.chips{display:none}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.card,.stat,.qa,.mgi,.nextstep,.gstep,.srow,.sess,.rrow,.btn.ghost,.seg,.tabs{background:var(--solid)}#nav-bottom,#sidebar,.mbox{background:var(--solid)}}
+@media(prefers-reduced-transparency:reduce){.card,.stat,.qa,.mgi,.nextstep,.gstep,.srow,.sess,.rrow,.btn.ghost,.seg,.tabs,#nav-bottom,#sidebar,.mbox,.hbtn{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--solid)}}
+@media print{*{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}body::before{display:none!important}}
