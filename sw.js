@@ -1,6 +1,6 @@
 /* Smart Attendance service worker.
    To release an update: change CACHE_VERSION. Old caches are removed; IndexedDB is never touched. */
-const CACHE_VERSION = 'v11';
+const CACHE_VERSION = 'v12';
 const CACHE = 'smart-attendance-' + CACHE_VERSION;
 const ASSETS = ['./', 'index.html', 'style.css', 'db.js', 'lib/jsQR.js', 'students.js', 'attendance.js', 'data.js', 'reports.js', 'security.js', 'settings.js', 'guide.js', 'ios.js', 'app.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 
