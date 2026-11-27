@@ -8,10 +8,10 @@ const NAV = [
   ['reports', 'Records and Reports', 'Reports', 5], ['backup', 'Backup and Restore', 'Backup', 6],
   ['settings', 'Settings', 'Settings', 1], ['about', 'About and Help', 'About', 1], ['more', 'All sections', 'More', 1], ['start', 'Start Here', 'Start', 1]
 ];
-const BOTTOM = [['dashboard', 'Home'], ['students', 'Students'], ['scanner', 'Attendance'], ['reports', 'Reports'], ['settings', 'Settings']];
-const SIDE = [['dashboard', 'Home'], ['students', 'Students'], ['scanner', 'Take Attendance'], ['reports', 'Records and Reports'], ['backup', 'Backup and Restore'], ['settings', 'Settings']];
+const BOTTOM = [['dashboard', 'Home'], ['students', 'Students'], ['scanner', 'Attendance'], ['reports', 'Reports']];
+const SIDE = [['dashboard', 'Home'], ['students', 'Students'], ['scanner', 'Take Attendance'], ['reports', 'Records and Reports'], ['settings', 'Settings']];
 /* pages that live under one of the main menu items */
-const ALIAS = { history: 'reports', setup: 'settings', about: 'settings', idcards: 'students', start: 'dashboard', more: 'dashboard', teachers: 'dashboard', classes: 'dashboard', subjects: 'dashboard', assignments: 'dashboard' };
+const ALIAS = { history: 'reports', setup: 'settings', about: 'settings', backup: 'settings', idcards: 'students', start: 'dashboard', more: 'dashboard', teachers: 'dashboard', classes: 'dashboard', subjects: 'dashboard', assignments: 'dashboard' };
 const IC = {
   dashboard: '<path d="M3 11l9-8 9 8"/><path d="M5 9.5V20h14V9.5"/>',
   students: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3.2-6 6.5-6s6 2 6.5 6"/><path d="M16 4.5a3.5 3.5 0 010 7M18 14c2 .6 3.3 2.6 3.5 6"/>',
@@ -43,7 +43,7 @@ function toast(msg, kind) {
 }
 
 function renderNav(cur) {
-  const nav = id => NAV.find(n => n[0] === id), sc = ALIAS[cur] || cur, bc = cur === 'backup' ? 'settings' : sc;
+  const nav = id => NAV.find(n => n[0] === id), sc = ALIAS[cur] || cur, bc = BOTTOM.some(b => b[0] === sc) ? sc : '';
   const link = (id, label, c) => `<a class="nl" href="#${id}" ${id === c ? 'aria-current="page"' : ''}>${ico(id)}<span>${esc(label)}</span></a>`;
   $('#nav-side').innerHTML = SIDE.map(([id, l]) => link(id, l, sc)).join('');
   $('#nav-bottom').innerHTML = BOTTOM.map(([id, l]) => link(id, l, bc)).join('');
@@ -123,12 +123,7 @@ async function viewDashboard(v) {
     <div class="card hero">${logo}<div><h1>${esc(institution.name)}</h1>
     <p class="sub" style="margin:0">${esc([institution.city, institution.session].filter(Boolean).join(' - ') || 'School')}</p><a href="#setup" class="note">Edit school details</a></div></div>
     ${start}${qas}
-    ${att}
-    <div class="card" style="margin-top:14px"><h2>App status</h2>
-      <p><span class="pill ${navigator.onLine ? '' : 'ok'}">${navigator.onLine ? 'Online' : 'Offline'}</span>
-      <span class="pill ${'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'ok' : ''}" id="sw-pill">${'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'Ready to work offline' : 'Offline mode not ready yet. Open the app once while online.'}</span>
-      <span class="pill ok">Data saved on this device</span></p>
-      <p class="note">All data is stored only on this device. Download a backup regularly from <a href="#backup">Backup and Restore</a>.</p></div>`;
+    ${att}`;
 }
 
 function readLogo(file) {
